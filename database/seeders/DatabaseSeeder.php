@@ -2,24 +2,26 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
+     *
+     * Nothing is seeded on the live site: create the first admin there with
+     * `php artisan app:create-admin`. Locally we add test accounts and
+     * clearly-labelled sample members.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        if (! app()->environment('local', 'testing')) {
+            return;
+        }
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            LocalTestAccountsSeeder::class,
+            SampleMembersSeeder::class,
         ]);
     }
 }

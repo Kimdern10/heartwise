@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Support;
+
+class Geo
+{
+    /** Small margin (degrees) so people near a border are not rejected. */
+    private const MARGIN = 0.25;
+
+    public static function isInState(float $lat, float $lng, string $state): bool
+    {
+        $box = config('us_state_bounds.'.$state);
+
+        if (! $box) {
+            return false;
+        }
+
+        [$minLat, $maxLat, $minLng, $maxLng] = $box;
+
+        return $lat >= $minLat - self::MARGIN && $lat <= $maxLat + self::MARGIN
+            && $lng >= $minLng - self::MARGIN && $lng <= $maxLng + self::MARGIN;
+    }
+
+    public static function distanceMiles(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $r = 3958.8;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return $r * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+}

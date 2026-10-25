@@ -1,0 +1,211 @@
+/* ===================================================================
+   Heartwise design system: brand colors, animations, shared surfaces.
+   Imported from app.css.
+   =================================================================== */
+
+@theme {
+    --color-brand-50: #fff1f4;
+    --color-brand-100: #ffe1e8;
+    --color-brand-400: #fb6f92;
+    --color-brand-500: #f43f6e;
+    --color-brand-600: #e11d5a;
+    --color-brand-700: #be1250;
+    --color-plum-500: #a855f7;
+    --color-plum-600: #9333ea;
+
+    --animate-fade-up: fade-up .6s cubic-bezier(.2, .8, .2, 1) both;
+    --animate-float: float 6s ease-in-out infinite;
+    --animate-float-slow: float 9s ease-in-out infinite;
+    --animate-blob: blob 18s ease-in-out infinite;
+    --animate-gradient: gradient-pan 8s ease infinite;
+    --animate-pop: pop .45s cubic-bezier(.2, 1.4, .4, 1) both;
+    --animate-shimmer: shimmer 1.6s linear infinite;
+
+    @keyframes fade-up {
+        from { opacity: 0; transform: translateY(18px); }
+        to { opacity: 1; transform: none; }
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+        50% { transform: translateY(-14px) rotate(var(--r, 0deg)); }
+    }
+    @keyframes blob {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(40px, -30px) scale(1.08); }
+        66% { transform: translate(-30px, 20px) scale(.95); }
+    }
+    @keyframes gradient-pan {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+    @keyframes pop {
+        from { opacity: 0; transform: scale(.85); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes shimmer {
+        from { background-position: -200% 0; }
+        to { background-position: 200% 0; }
+    }
+}
+
+[x-cloak] { display: none !important; }
+
+/* Flux component polish: pill buttons, gradient primary, softer cards and inputs */
+[data-flux-button] { border-radius: 999px !important; transition: transform .15s, box-shadow .2s, filter .2s; }
+[data-flux-button]:active { transform: scale(.97); }
+[data-flux-button][class*="bg-[var(--color-accent)]"] {
+    background-image: linear-gradient(135deg, var(--color-brand-500), var(--color-plum-600));
+    border-color: transparent;
+    box-shadow: 0 10px 24px -12px rgb(225 29 90 / .7);
+}
+[data-flux-button][class*="bg-[var(--color-accent)]"]:hover { filter: brightness(1.06); box-shadow: 0 14px 28px -12px rgb(225 29 90 / .8); }
+[data-flux-card] {
+    border-radius: 1.5rem !important;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .03), 0 10px 30px -18px rgb(0 0 0 / .18);
+    border-color: rgb(0 0 0 / .05) !important;
+}
+.dark [data-flux-card] { background: rgb(24 24 27 / .8); border-color: rgb(255 255 255 / .06) !important; }
+[data-flux-input] input, [data-flux-control]:is(input, textarea, select), ui-select button { border-radius: .875rem !important; }
+[data-flux-sidebar-item][data-current] { background-image: linear-gradient(135deg, color-mix(in oklab, var(--color-brand-500) 14%, transparent), color-mix(in oklab, var(--color-plum-500) 10%, transparent)); color: var(--color-brand-700); }
+.dark [data-flux-sidebar-item][data-current] { color: var(--color-brand-400); }
+[data-flux-heading] { letter-spacing: -.015em; }
+
+/* Brand gradient text + surfaces */
+.text-gradient {
+    background: linear-gradient(100deg, var(--color-brand-500), var(--color-plum-500), var(--color-brand-500));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: var(--animate-gradient);
+}
+
+.bg-brand-gradient {
+    background-image: linear-gradient(135deg, var(--color-brand-500), var(--color-plum-600));
+}
+
+.glass {
+    background: color-mix(in oklab, white 72%, transparent);
+    backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid color-mix(in oklab, white 60%, transparent);
+}
+.dark .glass {
+    background: color-mix(in oklab, var(--color-zinc-900) 65%, transparent);
+    border-color: color-mix(in oklab, white 8%, transparent);
+}
+
+/* App canvas: soft mesh background behind everything */
+.app-canvas {
+    background:
+        radial-gradient(60rem 40rem at 110% -10%, color-mix(in oklab, var(--color-brand-500) 10%, transparent), transparent 60%),
+        radial-gradient(50rem 30rem at -10% 110%, color-mix(in oklab, var(--color-plum-500) 8%, transparent), transparent 60%),
+        var(--color-zinc-50);
+}
+.dark .app-canvas {
+    background:
+        radial-gradient(60rem 40rem at 110% -10%, color-mix(in oklab, var(--color-brand-500) 14%, transparent), transparent 60%),
+        radial-gradient(50rem 30rem at -10% 110%, color-mix(in oklab, var(--color-plum-500) 12%, transparent), transparent 60%),
+        var(--color-zinc-950);
+}
+
+/* Cards */
+.hw-card {
+    border-radius: 1.5rem;
+    background: white;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .04), 0 8px 24px -12px rgb(0 0 0 / .12);
+    border: 1px solid rgb(0 0 0 / .05);
+    transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s;
+}
+.dark .hw-card {
+    background: var(--color-zinc-900);
+    border-color: rgb(255 255 255 / .06);
+}
+.hw-card--hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 2px 4px rgb(0 0 0 / .04), 0 24px 40px -16px rgb(225 29 90 / .28);
+}
+
+/* Reveal on scroll (see resources/js/app.js) */
+[data-reveal] {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity .7s cubic-bezier(.2, .8, .2, 1), transform .7s cubic-bezier(.2, .8, .2, 1);
+    transition-delay: calc(var(--i, 0) * 80ms);
+}
+[data-reveal].is-revealed { opacity: 1; transform: none; }
+
+.stagger > * { animation: var(--animate-fade-up); }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(n+7) { animation-delay: 360ms; }
+
+/* Buttons used by the JS dialogs */
+.hw-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    height: 2.5rem; padding: 0 1.1rem; border-radius: 999px;
+    font-weight: 600; font-size: .875rem; cursor: pointer;
+    transition: transform .15s, box-shadow .2s, background .2s;
+}
+.hw-btn:active { transform: scale(.97); }
+.hw-btn--primary { color: white; background-image: linear-gradient(135deg, var(--color-brand-500), var(--color-plum-600)); box-shadow: 0 8px 20px -8px rgb(225 29 90 / .6); }
+.hw-btn--danger { color: white; background: var(--color-red-600); }
+.hw-btn--ghost { color: var(--color-zinc-700); background: var(--color-zinc-100); }
+.dark .hw-btn--ghost { color: var(--color-zinc-200); background: var(--color-zinc-800); }
+
+/* Confirm dialog + match celebration */
+.hw-confirm, .hw-match { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; }
+.hw-confirm__backdrop, .hw-match__backdrop { position: absolute; inset: 0; background: rgb(10 10 15 / .45); backdrop-filter: blur(4px); animation: fade-up .2s both; }
+.hw-confirm__panel {
+    position: relative; width: 100%; max-width: 24rem; border-radius: 1.5rem; padding: 1.5rem;
+    background: white; box-shadow: 0 30px 60px -20px rgb(0 0 0 / .35); animation: var(--animate-pop);
+}
+.dark .hw-confirm__panel { background: var(--color-zinc-900); color: white; }
+.hw-confirm__text { font-weight: 600; font-size: 1rem; line-height: 1.5; }
+.hw-confirm__actions { margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: .5rem; }
+.is-leaving { opacity: 0; transition: opacity .18s; }
+
+.hw-match__panel {
+    position: relative; overflow: hidden; width: 100%; max-width: 26rem; text-align: center;
+    border-radius: 2rem; padding: 2.5rem 1.75rem 1.75rem; color: white;
+    background-image: linear-gradient(135deg, var(--color-brand-500), var(--color-plum-600));
+    box-shadow: 0 40px 80px -24px rgb(225 29 90 / .6); animation: var(--animate-pop);
+}
+.hw-match__eyebrow { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; }
+.hw-match__title { margin-top: .25rem; font-size: 1.1rem; font-weight: 600; opacity: .95; }
+.hw-match__text { margin-top: .75rem; font-size: .875rem; opacity: .85; }
+.hw-match__actions { margin-top: 1.5rem; display: flex; justify-content: center; gap: .5rem; flex-wrap: wrap; }
+.hw-match__actions .hw-btn--primary { background: white; color: var(--color-brand-600); box-shadow: none; }
+.hw-match__actions .hw-btn--ghost { background: rgb(255 255 255 / .15); color: white; }
+.hw-match__hearts { position: absolute; inset: 0; pointer-events: none; }
+.hw-match__hearts span { position: absolute; bottom: -2rem; opacity: 0; animation: hearts-rise 2.4s ease-out forwards; }
+@keyframes hearts-rise {
+    0% { transform: translateY(0) scale(.6); opacity: 0; }
+    15% { opacity: .9; }
+    100% { transform: translateY(-28rem) scale(1.2) rotate(20deg); opacity: 0; }
+}
+
+/* Swipe deck */
+.swipe-card { touch-action: pan-y; user-select: none; cursor: grab; will-change: transform; }
+.swipe-card:active { cursor: grabbing; }
+.swipe-stamp {
+    position: absolute; top: 1.5rem; padding: .25rem .9rem; border: 3px solid currentColor; border-radius: .75rem;
+    font-size: 1.75rem; font-weight: 800; letter-spacing: .05em; pointer-events: none;
+}
+
+/* Shimmer placeholder */
+.skeleton {
+    background: linear-gradient(90deg, var(--color-zinc-100) 25%, var(--color-zinc-200) 37%, var(--color-zinc-100) 63%);
+    background-size: 400% 100%; animation: var(--animate-shimmer);
+}
+.dark .skeleton { background-image: linear-gradient(90deg, var(--color-zinc-800) 25%, var(--color-zinc-700) 37%, var(--color-zinc-800) 63%); }
+
+/* Chat bubbles */
+.bubble-in { animation: pop .3s cubic-bezier(.2, 1.2, .4, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    [data-reveal] { opacity: 1; transform: none; }
+}

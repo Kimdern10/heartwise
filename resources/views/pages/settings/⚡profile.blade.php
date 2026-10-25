@@ -62,7 +62,7 @@ new #[Title('Profile settings')] class extends Component {
 
         $user->sendEmailVerificationNotification();
 
-        Session::flash('status', 'verification-link-sent');
+        $this->redirectRoute('verification.notice', navigate: true);
     }
 
     #[Computed]
@@ -99,7 +99,7 @@ new #[Title('Profile settings')] class extends Component {
                             {{ __('Your email address is unverified.') }}
 
                             <flux:link class="text-sm cursor-pointer" wire:click.prevent="resendVerificationNotification">
-                                {{ __('Click here to re-send the verification email.') }}
+                                {{ __('Send me a verification code.') }}
                             </flux:link>
                         </flux:text>
 
