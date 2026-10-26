@@ -2,9 +2,9 @@
     {{-- Hero --}}
     <section class="relative overflow-hidden">
         <div class="pointer-events-none absolute inset-0 -z-10">
-            <div class="absolute -start-32 -top-32 size-[32rem] rounded-full bg-brand-400/30 blur-3xl animate-blob"></div>
-            <div class="absolute -end-24 top-20 size-[28rem] rounded-full bg-plum-500/25 blur-3xl animate-blob [animation-delay:-6s]"></div>
-            <div class="absolute bottom-0 start-1/3 size-80 rounded-full bg-amber-300/20 blur-3xl animate-blob [animation-delay:-12s]"></div>
+            <div class="absolute -start-32 -top-32 size-[32rem] rounded-full bg-brand-400/15 blur-3xl animate-blob"></div>
+            <div class="absolute -end-24 top-20 size-[28rem] rounded-full bg-plum-500/10 blur-3xl animate-blob [animation-delay:-6s]"></div>
+            <div class="absolute bottom-0 start-1/3 size-80 rounded-full bg-amber-300/15 blur-3xl animate-blob [animation-delay:-12s]"></div>
         </div>
 
         <div class="mx-auto grid max-w-6xl items-center gap-14 px-4 pb-20 pt-14 md:grid-cols-[1.1fr_1fr] md:pt-24">
@@ -14,7 +14,7 @@
                     {{ __('Every profile reviewed by a real person') }}
                 </span>
 
-                <h1 class="text-5xl font-extrabold leading-[1.05] tracking-tight animate-fade-up [animation-delay:80ms] md:text-6xl lg:text-7xl">
+                <h1 class="font-display text-6xl leading-[1.02] animate-fade-up [animation-delay:80ms] md:text-6xl lg:text-7xl">
                     {{ __('Real dating') }}<br>
                     {{ __('for') }} <span class="text-gradient">{{ __('real people.') }}</span>
                 </h1>
@@ -73,7 +73,7 @@
     <section class="mx-auto max-w-6xl px-4 py-20">
         <div class="mx-auto max-w-2xl text-center" data-reveal>
             <p class="text-sm font-bold uppercase tracking-widest text-brand-600">{{ __('How it works') }}</p>
-            <h2 class="mt-2 text-4xl font-extrabold tracking-tight">{{ __('Three steps to your first date') }}</h2>
+            <h2 class="mt-2 font-display text-5xl">{{ __('Three steps to your first date') }}</h2>
         </div>
         <ol class="mt-14 grid gap-6 md:grid-cols-3">
             @foreach ([
@@ -100,7 +100,7 @@
         <div class="mx-auto max-w-6xl px-4 text-white">
             <div class="max-w-2xl" data-reveal>
                 <p class="text-sm font-bold uppercase tracking-widest text-brand-400">{{ __('Safety first') }}</p>
-                <h2 class="mt-2 text-4xl font-extrabold tracking-tight">{{ __('Built to keep scammers out') }}</h2>
+                <h2 class="mt-2 font-display text-5xl">{{ __('Built to keep scammers out') }}</h2>
                 <p class="mt-3 text-lg text-white/70">{{ __('Romance scams cost Americans over a billion dollars a year. Here’s how we fight back.') }}</p>
             </div>
             <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -124,7 +124,7 @@
 
     {{-- FAQ --}}
     <section class="mx-auto max-w-3xl px-4 py-20">
-        <h2 class="text-center text-4xl font-extrabold tracking-tight" data-reveal>{{ __('Questions?') }}</h2>
+        <h2 class="text-center font-display text-5xl" data-reveal>{{ __('Questions?') }}</h2>
         <div class="mt-10 space-y-3">
             @foreach ([
                 [__('Is it free?'), __('Yes. Creating a profile, liking people and chatting with your matches is free.')],
@@ -149,7 +149,7 @@
     <section class="mx-auto mb-20 max-w-6xl px-4" data-reveal>
         <div class="bg-brand-gradient relative overflow-hidden rounded-[2.5rem] px-8 py-14 text-center text-white shadow-2xl shadow-brand-500/30">
             <div class="absolute -start-10 -top-10 size-60 rounded-full bg-white/10 blur-2xl animate-blob"></div>
-            <h2 class="relative text-4xl font-extrabold tracking-tight">{{ __('Your person might be one swipe away.') }}</h2>
+            <h2 class="relative font-display text-5xl">{{ __('Your person might be one swipe away.') }}</h2>
             <p class="relative mt-3 text-lg text-white/85">{{ __('Join free in under two minutes.') }}</p>
             <a href="{{ auth()->check() ? route('discover') : route('register') }}" class="relative mt-7 inline-flex h-12 items-center rounded-full bg-white px-8 font-bold text-brand-600 shadow-xl transition hover:scale-105">
                 {{ auth()->check() ? __('Start discovering') : __('Create my profile') }} →

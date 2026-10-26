@@ -16,7 +16,7 @@ new #[Title('Matches')] class extends Component {
 
 <section class="mx-auto w-full max-w-6xl space-y-6">
     <div class="animate-fade-up">
-        <flux:heading size="xl" level="1" class="!text-3xl !font-extrabold">{{ __('Matches') }}</flux:heading>
+        <flux:heading size="xl" level="1" class="font-display !text-4xl">{{ __('Matches') }}</flux:heading>
         <flux:subheading size="lg">{{ __('People who liked you back. Say hello!') }}</flux:subheading>
     </div>
 

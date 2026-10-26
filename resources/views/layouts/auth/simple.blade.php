@@ -32,7 +32,7 @@
                         </div>
                     </div>
 
-                    <h2 class="text-4xl font-extrabold leading-tight tracking-tight">{{ __('Find someone real.') }}</h2>
+                    <h2 class="font-display text-5xl leading-tight">{{ __('Find someone real.') }}</h2>
                     <p class="mt-3 text-lg text-white/85">{{ __('A dating community for US adults 18+, where every profile is checked by a real person.') }}</p>
                 </div>
 

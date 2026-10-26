@@ -121,6 +121,32 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->photos()->where('status', ModerationStatus::Approved);
     }
 
+    /** @return HasMany<ProfilePrompt, $this> */
+    public function prompts(): HasMany
+    {
+        return $this->hasMany(ProfilePrompt::class)->orderBy('position');
+    }
+
+    /** @return HasMany<Favorite, $this> */
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    public function hasFavorited(User $other): bool
+    {
+        return $this->favorites()->where('favorite_id', $other->id)->exists();
+    }
+
+    /**
+     * One Spark (stand-out like) per day for everyone.
+     */
+    public function hasSparkLeftToday(): bool
+    {
+        return ! Like::query()->where('user_id', $this->id)->where('is_spark', true)
+            ->where('updated_at', '>=', now()->startOfDay())->exists();
+    }
+
     /** @return HasMany<Like, $this> */
     public function likesGiven(): HasMany
     {
@@ -238,7 +264,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function unreadMessagesCount(): int
     {
         return Message::query()
-            ->whereIn('match_id', UserMatch::query()->involving($this)->select('id'))
+            ->whereIn('match_id', UserMatch::query()->involving($this)->active()->select('id'))
             ->where('sender_id', '!=', $this->id)
             ->whereNotIn('sender_id', $this->blockedUserIds())
             ->whereNull('read_at')
@@ -247,7 +273,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 
     public function matchWith(User $other): ?UserMatch
     {
-        return UserMatch::between($this, $other)->first();
+        return UserMatch::between($this, $other)->active()->first();
     }
 
     /**

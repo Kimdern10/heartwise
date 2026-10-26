@@ -226,7 +226,7 @@ new #[Title('My profile')] class extends Component {
 
 <section class="mx-auto w-full max-w-3xl space-y-8">
     <div>
-        <flux:heading size="xl" level="1" class="!text-3xl !font-extrabold">{{ __('My profile') }}</flux:heading>
+        <flux:heading size="xl" level="1" class="font-display !text-4xl">{{ __('My profile') }}</flux:heading>
         <flux:subheading size="lg">{{ __('Be yourself. Real photos and an honest bio get the best matches.') }}</flux:subheading>
     </div>
 
@@ -417,4 +417,20 @@ new #[Title('My profile')] class extends Component {
             </div>
         </form>
     </flux:card>
+
+    @if ($this->profile)
+        <livewire:profile-details />
+
+        <div class="hw-card flex flex-wrap items-center justify-between gap-4 p-6">
+            <div>
+                <flux:heading size="lg" class="font-display !text-2xl">{{ __('Dating preferences') }}</flux:heading>
+                <flux:text>{{ __('Age range, distance and dealbreakers.') }}</flux:text>
+            </div>
+            <flux:button icon="adjustments-horizontal" :href="route('preferences')" wire:navigate>{{ __('Edit preferences') }}</flux:button>
+        </div>
+
+        <div class="text-center">
+            <flux:button variant="ghost" icon="eye" :href="route('people.show', auth()->user())" wire:navigate>{{ __('Preview my profile') }}</flux:button>
+        </div>
+    @endif
 </section>

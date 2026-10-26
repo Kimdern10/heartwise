@@ -1,8 +1,9 @@
 <?php
 
-use App\Actions\Dating\LikeUser;
-use App\Exceptions\DatingActionException;
+use App\Livewire\Concerns\LikesProfiles;
+use App\Models\Favorite;
 use App\Models\Like;
+use App\Models\ProfileView;
 use App\Models\User;
 use App\Models\UserMatch;
 use Flux\Flux;
@@ -12,6 +13,8 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 new class extends Component {
+    use LikesProfiles;
+
     #[Locked]
     public int $personId;
 
@@ -25,18 +28,26 @@ new class extends Component {
         abort_unless($visible, 404);
 
         $this->personId = $user->id;
+
+        ProfileView::record($viewer, $user);
     }
 
     #[Computed]
     public function person(): User
     {
-        return User::with(['profile', 'approvedPhotos'])->findOrFail($this->personId);
+        return User::with(['profile', 'approvedPhotos', 'prompts'])->findOrFail($this->personId);
     }
 
     #[Computed]
-    public function myReaction(): ?bool
+    public function myLike(): ?Like
     {
-        return Like::query()->where('user_id', Auth::id())->where('target_id', $this->personId)->value('liked');
+        return Like::query()->where('user_id', Auth::id())->where('target_id', $this->personId)->first();
+    }
+
+    #[Computed]
+    public function theirLike(): ?Like
+    {
+        return Like::query()->where('user_id', $this->personId)->where('target_id', Auth::id())->where('liked', true)->first();
     }
 
     #[Computed]
@@ -45,25 +56,41 @@ new class extends Component {
         return Auth::user()->matchWith($this->person);
     }
 
-    public function react(bool $liked, LikeUser $likeUser): void
+    #[Computed]
+    public function isFavorite(): bool
     {
-        try {
-            $match = $likeUser->handle(Auth::user(), $this->person, $liked);
-        } catch (DatingActionException $e) {
-            Flux::toast(variant: 'warning', text: $e->getMessage());
+        return Auth::user()->hasFavorited($this->person);
+    }
 
-            return;
+    public function toggleFavorite(): void
+    {
+        $existing = Favorite::query()->where('user_id', Auth::id())->where('favorite_id', $this->personId);
+
+        if ($existing->exists()) {
+            $existing->delete();
+            Flux::toast(text: __('Removed from favorites.'));
+        } else {
+            Favorite::create(['user_id' => Auth::id(), 'favorite_id' => $this->personId]);
+            Flux::toast(variant: 'success', text: __('Saved to favorites.'));
         }
 
-        unset($this->myReaction, $this->match);
+        unset($this->isFavorite);
+    }
+
+    protected function afterLike(User $target, ?UserMatch $match): void
+    {
+        unset($this->myLike, $this->match);
 
         if ($match) {
-            $this->dispatch('matched', name: $this->person->displayName(), url: route('messages.show', $match));
-        } elseif (! $liked) {
-            $this->redirectRoute('discover', navigate: true);
+            $this->dispatch('matched', name: $target->displayName(), url: route('messages.show', $match));
         } else {
-            Flux::toast(variant: 'success', text: __('Liked! If :name likes you back, it’s a match.', ['name' => $this->person->displayName()]));
+            Flux::toast(variant: 'success', text: __('Like sent! If :name likes you back, it’s a match.', ['name' => $target->displayName()]));
         }
+    }
+
+    protected function afterPass(): void
+    {
+        $this->redirectRoute('discover', navigate: true);
     }
 
     public function render()
@@ -73,97 +100,63 @@ new class extends Component {
 }; ?>
 
 @php($person = $this->person)
-@php($profile = $person->profile)
-@php($miles = Auth::user()->profile?->milesFrom($profile))
+@php($isMe = Auth::user()->is($person))
+@php($canLike = ! $isMe && ! $this->match && ! $this->myLike?->liked)
 
-<section class="mx-auto w-full max-w-5xl space-y-6">
-    <flux:button size="sm" variant="ghost" icon="arrow-left" :href="route('discover')" wire:navigate>{{ __('Back to Discover') }}</flux:button>
+<section class="w-full pb-24">
+    <div class="mx-auto mb-2 flex max-w-xl items-center justify-between">
+        <flux:button size="sm" variant="ghost" icon="arrow-left" x-on:click="history.length > 1 ? history.back() : Livewire.navigate('{{ route('discover') }}')">{{ __('Back') }}</flux:button>
+        @unless ($isMe)
+            <flux:button size="sm" variant="ghost" icon="star" wire:click="toggleFavorite" data-test="favorite-button"
+                class="{{ $this->isFavorite ? '!text-amber-500' : '' }}">
+                {{ $this->isFavorite ? __('Favorited') : __('Favorite') }}
+            </flux:button>
+        @else
+            <flux:badge>{{ __('This is how others see you') }}</flux:badge>
+        @endunless
+    </div>
 
-    <div class="grid gap-8 md:grid-cols-[1fr_1.1fr]">
-        <div class="space-y-3 animate-fade-up" x-data="{ current: 0, total: {{ max(1, $person->approvedPhotos->count()) }} }">
-            <div class="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-2xl shadow-black/15">
-                @if ($person->approvedPhotos->isEmpty())
-                    <x-member-photo :user="$person" :small="false" class="absolute inset-0 size-full" />
-                @else
-                    @foreach ($person->approvedPhotos as $photo)
-                        <img x-show="current === {{ $loop->index }}"
-                            x-transition:enter="transition duration-500" x-transition:enter-start="opacity-0 scale-105" x-transition:enter-end="opacity-100 scale-100"
-                            src="{{ $photo->url() }}" alt="{{ __('Photo :n of :name', ['n' => $loop->iteration, 'name' => $person->displayName()]) }}"
-                            class="absolute inset-0 size-full object-cover" @if (! $loop->first) x-cloak @endif />
-                    @endforeach
-
-                    @if ($person->approvedPhotos->count() > 1)
-                        <div class="absolute inset-x-4 top-4 flex gap-1.5">
-                            @foreach ($person->approvedPhotos as $photo)
-                                <span class="h-1 flex-1 rounded-full transition" x-bind:class="current === {{ $loop->index }} ? 'bg-white' : 'bg-white/40'"></span>
-                            @endforeach
-                        </div>
-                        <button type="button" class="absolute inset-y-0 start-0 w-1/3" x-on:click="current = (current - 1 + total) % total" aria-label="{{ __('Previous photo') }}"></button>
-                        <button type="button" class="absolute inset-y-0 end-0 w-1/3" x-on:click="current = (current + 1) % total" aria-label="{{ __('Next photo') }}"></button>
-                    @endif
-                @endif
-            </div>
+    @if ($this->theirLike && ! $this->match && ! $isMe)
+        <div class="mx-auto mb-4 max-w-xl rounded-3xl bg-zinc-900 p-5 text-white dark:bg-white dark:text-zinc-900">
+            <p class="flex items-center gap-2 font-semibold">
+                @if ($this->theirLike->is_spark)<flux:icon.bolt variant="solid" class="size-5 text-amber-400" />@else<flux:icon.heart variant="solid" class="size-5 text-brand-400" />@endif
+                {{ __(':name liked you', ['name' => $person->displayName()]) }}
+            </p>
+            @if ($this->theirLike->comment)
+                <p class="font-display mt-2 text-xl">“{{ $this->theirLike->comment }}”</p>
+            @endif
+            <p class="mt-1 text-sm opacity-70">{{ __('Like anything on their profile to match.') }}</p>
         </div>
+    @endif
 
-        <div class="space-y-6 animate-fade-up [animation-delay:120ms]">
-            <div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <flux:heading size="xl" level="1" class="!text-4xl !font-extrabold">{{ $person->displayName() }}</flux:heading>
-                    <span class="text-3xl font-light text-zinc-500">{{ $person->age() }}</span>
-                    <x-verified-badge :user="$person" class="size-7" />
-                    <x-location-badge :user="$person" class="size-6" />
-                </div>
-                <flux:text class="mt-2 flex items-center gap-1">
-                    <flux:icon.map-pin class="size-4" /> {{ $profile->location() }}
-                    @if ($miles) · {{ trans_choice(':count mile away|:count miles away', $miles) }} @endif
-                </flux:text>
-                @if ($profile->show_last_active && $person->last_active_at)
-                    <flux:text class="mt-1 flex items-center gap-1.5 text-sm">
-                        @if ($person->last_active_at->gt(now()->subMinutes(15)))
-                            <span class="relative flex size-2.5"><span class="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex size-2.5 rounded-full bg-emerald-500"></span></span>
-                            {{ __('Active now') }}
-                        @else
-                            {{ __('Active :time', ['time' => $person->last_active_at->diffForHumans()]) }}
-                        @endif
-                    </flux:text>
-                @endif
-                <x-sample-badge :user="$person" class="mt-2" />
-            </div>
+    @include('partials.profile-feed', ['person' => $person, 'canLike' => $canLike])
 
-            <div class="flex flex-wrap gap-2">
-                <span class="rounded-full bg-zinc-100 px-3 py-1 text-sm font-medium dark:bg-zinc-800">{{ $profile->gender->label() }}</span>
-                <span class="rounded-full bg-zinc-100 px-3 py-1 text-sm font-medium dark:bg-zinc-800">{{ __('Into :who', ['who' => strtolower($profile->seeking->label())]) }}</span>
-                @if ($profile->relationship_goal)
-                    <span class="bg-brand-gradient rounded-full px-3 py-1 text-sm font-semibold text-white">{{ $profile->relationship_goal->label() }}</span>
-                @endif
-                @if ($profile->heightLabel())
-                    <span class="rounded-full bg-zinc-100 px-3 py-1 text-sm font-medium dark:bg-zinc-800">{{ $profile->heightLabel() }}</span>
-                @endif
-            </div>
-
-            @if ($profile->bio)
-                <div class="hw-card p-5">
-                    <p class="text-xs font-bold uppercase tracking-wider text-brand-600">{{ __('About me') }}</p>
-                    <p class="mt-2 whitespace-pre-line leading-relaxed text-zinc-700 dark:text-zinc-300">{{ $profile->bio }}</p>
-                </div>
+    @unless ($isMe)
+        <div class="mx-auto mt-6 max-w-xl space-y-4">
+            @if ($this->match)
+                <flux:button variant="primary" class="w-full" icon="chat-bubble-left-right" :href="route('messages.show', $this->match)" wire:navigate>{{ __('Send a message') }}</flux:button>
+            @elseif ($this->myLike?->liked)
+                <p class="text-center text-sm text-zinc-500">{{ __('You liked :name. If they like you back, it’s a match.', ['name' => $person->displayName()]) }}</p>
             @endif
 
-            @unless (Auth::user()->is($person))
-                <div class="flex flex-wrap gap-3">
-                    @if ($this->match)
-                        <flux:button variant="primary" icon="chat-bubble-left-right" :href="route('messages.show', $this->match)" wire:navigate>{{ __('Send a message') }}</flux:button>
-                    @elseif ($this->myReaction === true)
-                        <flux:button disabled icon="heart">{{ __('You liked :name', ['name' => $person->displayName()]) }}</flux:button>
-                    @else
-                        <flux:button icon="x-mark" wire:click="react(false)">{{ __('Pass') }}</flux:button>
-                        <flux:button variant="primary" icon="heart" wire:click="react(true)" data-test="like-button">{{ __('Like') }}</flux:button>
-                    @endif
-                </div>
-
-                <div class="border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                    <livewire:report-block :user-id="$person->id" :key="'rb-'.$person->id" />
-                </div>
-            @endunless
+            <div class="flex justify-center border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                <livewire:report-block :user-id="$person->id" :key="'rb-'.$person->id" />
+            </div>
         </div>
-    </div>
+
+        @if ($canLike)
+            <div class="pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-between px-6 lg:bottom-8 lg:ps-72">
+                <button type="button" wire:click="passOn({{ $person->id }})" aria-label="{{ __('Pass') }}"
+                    class="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-white text-zinc-700 shadow-xl ring-1 ring-zinc-200 transition hover:scale-110 active:scale-95 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-zinc-700">
+                    <flux:icon.x-mark class="size-7" />
+                </button>
+                <button type="button" wire:click="openLike({{ $person->id }})" aria-label="{{ __('Like') }}" data-test="like-button"
+                    class="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-xl transition hover:scale-110 active:scale-95 dark:bg-white dark:text-zinc-900">
+                    <flux:icon.heart variant="solid" class="size-7" />
+                </button>
+            </div>
+        @endif
+
+        @include('partials.like-modal')
+    @endunless
 </section>

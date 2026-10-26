@@ -23,7 +23,7 @@ class SendMessage
 
         $receiver = $match->otherUser($sender);
 
-        if (! $receiver->isActive() || $sender->hasBlockBetween($receiver)) {
+        if (! $match->isActive() || ! $receiver->isActive() || $sender->hasBlockBetween($receiver)) {
             throw new DatingActionException('This conversation is no longer available.');
         }
 

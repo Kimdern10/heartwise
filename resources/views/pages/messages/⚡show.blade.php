@@ -21,7 +21,7 @@ new class extends Component {
     {
         $viewer = Auth::user();
 
-        abort_unless($match->includes($viewer), 404);
+        abort_unless($match->includes($viewer) && $match->isActive(), 404);
 
         $other = $match->otherUser($viewer);
         abort_if(! $other->isActive() || $viewer->hasBlockBetween($other), 404);
@@ -69,6 +69,36 @@ new class extends Component {
         $this->dispatch('message-sent');
     }
 
+    public function unmatch(): void
+    {
+        $this->match->unmatch(Auth::user());
+
+        Flux::toast(text: __('Unmatched. You won’t see each other again.'));
+        $this->redirectRoute('messages.index', navigate: true);
+    }
+
+    /**
+     * Ask "Did you meet?" once the chat has been going a few days.
+     */
+    #[Computed]
+    public function askWeMet(): bool
+    {
+        return $this->match->created_at->lt(now()->subDays(3))
+            && $this->match->messages()->count() >= 6
+            && ! $this->match->feedback()->where('user_id', Auth::id())->exists();
+    }
+
+    public function weMet(bool $met, ?int $rating = null): void
+    {
+        $this->match->feedback()->updateOrCreate(
+            ['user_id' => Auth::id()],
+            ['met' => $met, 'rating' => $met && $rating ? max(1, min(5, $rating)) : null],
+        );
+
+        unset($this->askWeMet);
+        Flux::toast(variant: 'success', text: $met ? __('Thanks! That helps us find you better matches.') : __('Thanks for letting us know.'));
+    }
+
     private function markRead(): void
     {
         $this->match->messages()
@@ -103,7 +133,14 @@ new class extends Component {
                     <p class="text-xs text-zinc-500">{{ $online ? __('Active now') : $other->profile?->location() }}</p>
                 </div>
             </a>
-            <div class="ms-auto">
+            <div class="ms-auto flex items-center gap-1">
+                <flux:dropdown align="end">
+                    <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" :aria-label="__('More')" />
+                    <flux:menu>
+                        <flux:menu.item icon="user" :href="route('people.show', $other)" wire:navigate>{{ __('View profile') }}</flux:menu.item>
+                        <flux:menu.item icon="arrow-uturn-left" wire:click="unmatch" data-confirm-danger data-confirm="{{ __('Unmatch :name? The chat will disappear for both of you.', ['name' => $other->displayName()]) }}" data-test="unmatch">{{ __('Unmatch') }}</flux:menu.item>
+                    </flux:menu>
+                </flux:dropdown>
                 <livewire:report-block :user-id="$other->id" :key="'rb-chat-'.$other->id" />
             </div>
         </div>
@@ -146,6 +183,22 @@ new class extends Component {
                 </div>
             @endforelse
         </div>
+
+        @if ($this->askWeMet)
+            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 bg-amber-50 px-4 py-3 dark:border-zinc-800 dark:bg-amber-500/10" x-data="{ met: false }">
+                <p class="text-sm font-semibold" x-show="! met">{{ __('Have you met :name in person yet?', ['name' => $other->displayName()]) }}</p>
+                <div class="flex gap-2" x-show="! met">
+                    <flux:button size="xs" wire:click="weMet(false)">{{ __('Not yet') }}</flux:button>
+                    <flux:button size="xs" variant="primary" x-on:click="met = true">{{ __('We met!') }}</flux:button>
+                </div>
+                <div class="flex flex-wrap items-center gap-2" x-show="met" x-cloak>
+                    <span class="text-sm font-semibold">{{ __('Would you see them again?') }}</span>
+                    @foreach ([5 => __('Definitely'), 3 => __('Maybe'), 1 => __('No')] as $rating => $label)
+                        <flux:button size="xs" wire:click="weMet(true, {{ $rating }})">{{ $label }}</flux:button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         {{-- Composer --}}
         <form wire:submit="send" class="flex items-end gap-2 border-t border-zinc-100 p-3 dark:border-zinc-800">

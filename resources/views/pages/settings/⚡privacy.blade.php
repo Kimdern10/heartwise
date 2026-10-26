@@ -13,12 +13,15 @@ new #[Title('Privacy settings')] class extends Component {
 
     public bool $showLastActive = true;
 
+    public bool $browsePrivately = false;
+
     public function mount(): void
     {
         $profile = Auth::user()->profile;
 
         $this->isVisible = $profile?->is_visible ?? true;
         $this->showLastActive = $profile?->show_last_active ?? true;
+        $this->browsePrivately = $profile?->browse_privately ?? false;
     }
 
     #[Computed]
@@ -40,6 +43,7 @@ new #[Title('Privacy settings')] class extends Component {
         $profile->forceFill([
             'is_visible' => $this->isVisible,
             'show_last_active' => $this->showLastActive,
+            'browse_privately' => $this->browsePrivately,
         ])->save();
 
         Flux::toast(variant: 'success', text: __('Privacy settings saved.'));
@@ -63,6 +67,7 @@ new #[Title('Privacy settings')] class extends Component {
                 <flux:switch wire:model.live="isVisible" :label="__('Show my profile in Discover')"
                     :description="__('Turn off to take a break. Your matches can still message you.')" />
                 <flux:switch wire:model.live="showLastActive" :label="__('Show when I was last active')" />
+                <flux:switch wire:model.live="browsePrivately" :label="__('Browse privately')" :description="__('Don’t show up in other members’ “Viewed you” list.')" />
             </div>
 
             <flux:separator variant="subtle" />

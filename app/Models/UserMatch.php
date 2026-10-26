@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property int $user_one_id
  * @property int $user_two_id
  * @property Carbon|null $last_message_at
+ * @property int|null $unmatched_by
+ * @property Carbon|null $unmatched_at
  * @property Carbon $created_at
  * @property-read User $userOne
  * @property-read User $userTwo
@@ -29,7 +31,7 @@ class UserMatch extends Model
 
     protected function casts(): array
     {
-        return ['last_message_at' => 'datetime'];
+        return ['last_message_at' => 'datetime', 'unmatched_at' => 'datetime'];
     }
 
     public static function createBetween(User $a, User $b): self
@@ -48,6 +50,34 @@ class UserMatch extends Model
     {
         $query->where('user_one_id', min($a->id, $b->id))
             ->where('user_two_id', max($a->id, $b->id));
+    }
+
+    /**
+     * @param  Builder<UserMatch>  $query
+     */
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->whereNull('unmatched_at');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->unmatched_at === null;
+    }
+
+    /**
+     * Hide the chat for both people. Messages are kept for moderators.
+     */
+    public function unmatch(User $by): void
+    {
+        $this->forceFill(['unmatched_by' => $by->id, 'unmatched_at' => now()])->save();
+    }
+
+    /** @return HasMany<DateFeedback, $this> */
+    public function feedback(): HasMany
+    {
+        return $this->hasMany(DateFeedback::class, 'match_id');
     }
 
     /**

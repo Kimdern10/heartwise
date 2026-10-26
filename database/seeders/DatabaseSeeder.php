@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             LocalTestAccountsSeeder::class,
             SampleMembersSeeder::class,
+            SampleProfileDetailsSeeder::class,
         ]);
     }
 }

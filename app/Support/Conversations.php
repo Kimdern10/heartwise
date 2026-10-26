@@ -20,6 +20,7 @@ class Conversations
 
         return UserMatch::query()
             ->involving($user)
+            ->active()
             ->whereNotIn('user_one_id', $blocked)
             ->whereNotIn('user_two_id', $blocked)
             ->whereHas('userOne', fn (Builder $q) => $q->where('status', 'active'))

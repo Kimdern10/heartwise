@@ -85,7 +85,20 @@ function initReveal() {
     items.forEach((el) => io.observe(el));
 }
 
-document.addEventListener('DOMContentLoaded', initReveal);
+document.addEventListener('DOMContentLoaded', () => {
+    initReveal();
+
+    // Livewire swaps content in without a page load; reveal anything new it adds.
+    let queued = false;
+    new MutationObserver(() => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+            queued = false;
+            initReveal();
+        });
+    }).observe(document.body, { childList: true, subtree: true });
+});
 document.addEventListener('livewire:navigated', initReveal);
 
 /* ---------------------------------------------------------------

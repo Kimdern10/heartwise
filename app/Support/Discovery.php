@@ -5,15 +5,18 @@ namespace App\Support;
 use App\Models\Like;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Builds the "people you might like" query for a member: discoverable,
- * mutually compatible by gender preference, and not blocked either way.
+ * mutually compatible by gender preference, not blocked either way, and
+ * respecting the member's dealbreakers. Search filters narrow it further.
  */
 class Discovery
 {
     /**
-     * @param  array{age_min?: int|null, age_max?: int|null, state?: string|null, verified?: bool, goal?: string|null, hide_seen?: bool}  $filters
+     * @param  array<string, mixed>  $filters
      * @return Builder<User>
      */
     public static function for(User $viewer, array $filters = []): Builder
@@ -30,6 +33,8 @@ class Discovery
             $query->whereHas('profile', fn (Builder $q) => $q
                 ->whereIn('gender', $profile->seeking->genders())
                 ->whereIn('seeking', $profile->gender->seekingValuesThatInclude()));
+
+            self::applyDealbreakers($query, $profile);
         }
 
         $ageMin = max((int) ($filters['age_min'] ?? config('dating.minimum_age')), config('dating.minimum_age'));
@@ -38,16 +43,42 @@ class Discovery
         $query->where('date_of_birth', '<=', now()->subYears($ageMin)->toDateString())
             ->where('date_of_birth', '>', now()->subYears($ageMax + 1)->toDateString());
 
-        if (! empty($filters['state'])) {
-            $query->whereHas('profile', fn (Builder $q) => $q->where('state', $filters['state']));
+        $profileFilters = array_filter([
+            'state' => $filters['state'] ?? null,
+            'relationship_goal' => $filters['goal'] ?? null,
+            'religion' => $filters['religion'] ?? null,
+            'education' => $filters['education'] ?? null,
+            'has_kids' => $filters['has_kids'] ?? null,
+            'wants_kids' => $filters['wants_kids'] ?? null,
+            'drinking' => $filters['drinking'] ?? null,
+            'smoking' => $filters['smoking'] ?? null,
+        ]);
+
+        if ($profileFilters) {
+            $query->whereHas('profile', function (Builder $q) use ($profileFilters) {
+                foreach ($profileFilters as $column => $value) {
+                    $q->where($column, $value);
+                }
+            });
         }
 
-        if (! empty($filters['goal'])) {
-            $query->whereHas('profile', fn (Builder $q) => $q->where('relationship_goal', $filters['goal']));
+        if (! empty($filters['height_min']) || ! empty($filters['height_max'])) {
+            $query->whereHas('profile', fn (Builder $q) => $q
+                ->when($filters['height_min'] ?? null, fn ($q, $in) => $q->where('height_cm', '>=', (int) floor($in * 2.54)))
+                ->when($filters['height_max'] ?? null, fn ($q, $in) => $q->where('height_cm', '<=', (int) ceil($in * 2.54))));
         }
 
         if (! empty($filters['verified'])) {
             $query->whereHas('profile', fn (Builder $q) => $q->whereNotNull('photo_verified_at'));
+        }
+
+        if (! empty($filters['online'])) {
+            $query->where('last_active_at', '>=', now()->subMinutes(15))
+                ->whereHas('profile', fn (Builder $q) => $q->where('show_last_active', true));
+        }
+
+        if (! empty($filters['has_prompts'])) {
+            $query->whereHas('prompts');
         }
 
         if ($filters['hide_seen'] ?? true) {
@@ -55,5 +86,68 @@ class Discovery
         }
 
         return $query->orderByDesc('last_active_at')->orderByDesc('users.id');
+    }
+
+    /**
+     * Today's single "Most Compatible" pick plus a few Standouts, cached per day.
+     *
+     * @return array{pick: User|null, standouts: Collection<int, User>}
+     */
+    public static function dailyPicks(User $viewer): array
+    {
+        $profile = $viewer->profile;
+
+        if (! $profile) {
+            return ['pick' => null, 'standouts' => collect()];
+        }
+
+        $ids = Cache::remember('daily-picks:'.$viewer->id.':'.now()->toDateString(), now()->endOfDay(), function () use ($viewer, $profile) {
+            return self::for($viewer)
+                ->with('profile.user')
+                ->limit(60)
+                ->get()
+                ->sortByDesc(fn (User $u) => Compatibility::score($profile, $u->profile))
+                ->take(7)
+                ->pluck('id')
+                ->all();
+        });
+
+        // Drop anyone the member has since liked, passed or blocked.
+        $people = self::for($viewer)->whereIn('users.id', $ids)->with('prompts')->get()
+            ->sortBy(fn (User $u) => array_search($u->id, $ids))->values();
+
+        return ['pick' => $people->first(), 'standouts' => $people->slice(1)->values()];
+    }
+
+    /**
+     * @param  Builder<User>  $query
+     */
+    private static function applyDealbreakers(Builder $query, $profile): void
+    {
+        if ($profile->hasDealbreaker('age') && $profile->pref_age_min && $profile->pref_age_max) {
+            $query->where('date_of_birth', '<=', now()->subYears($profile->pref_age_min)->toDateString())
+                ->where('date_of_birth', '>', now()->subYears($profile->pref_age_max + 1)->toDateString());
+        }
+
+        foreach (['religion', 'has_kids', 'wants_kids', 'drinking', 'smoking'] as $key) {
+            if ($profile->hasDealbreaker($key) && $profile->preferred($key)) {
+                $query->whereHas('profile', fn (Builder $q) => $q->whereIn($key, $profile->preferred($key)));
+            }
+        }
+
+        if ($profile->hasDealbreaker('verified')) {
+            $query->whereHas('profile', fn (Builder $q) => $q->whereNotNull('photo_verified_at'));
+        }
+
+        // Distance needs both people to have verified their location; uses a
+        // simple bounding box (1° latitude ≈ 69 miles) so it works on any database.
+        if ($profile->hasDealbreaker('distance') && $profile->pref_max_miles && $profile->latitude !== null) {
+            $latDelta = $profile->pref_max_miles / 69;
+            $lngDelta = $profile->pref_max_miles / max(1, 69 * cos(deg2rad($profile->latitude)));
+
+            $query->whereHas('profile', fn (Builder $q) => $q
+                ->whereBetween('latitude', [$profile->latitude - $latDelta, $profile->latitude + $latDelta])
+                ->whereBetween('longitude', [$profile->longitude - $lngDelta, $profile->longitude + $lngDelta]));
+        }
     }
 }

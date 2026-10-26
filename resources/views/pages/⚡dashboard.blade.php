@@ -34,7 +34,7 @@ new #[Title('Home')] class extends Component {
         $user = Auth::user();
 
         return [
-            ['label' => __('Liked you'), 'value' => Like::query()->where('target_id', $user->id)->where('liked', true)->whereNotIn('user_id', $user->blockedUserIds())->count(), 'icon' => 'heart', 'route' => null],
+            ['label' => __('Liked you'), 'value' => Like::query()->where('target_id', $user->id)->where('liked', true)->whereNotIn('user_id', $user->blockedUserIds())->count(), 'icon' => 'heart', 'route' => route('activity')],
             ['label' => __('Matches'), 'value' => UserMatch::query()->involving($user)->count(), 'icon' => 'sparkles', 'route' => route('matches')],
             ['label' => __('Unread'), 'value' => $user->unreadMessagesCount(), 'icon' => 'chat-bubble-left-right', 'route' => route('messages.index')],
         ];
@@ -54,7 +54,7 @@ new #[Title('Home')] class extends Component {
         <div class="relative flex flex-wrap items-center justify-between gap-6">
             <div class="max-w-md">
                 <p class="text-sm font-semibold text-white/80">{{ now()->format('l') }}</p>
-                <h1 class="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">{{ __('Hi :name 👋', ['name' => Auth::user()->displayName()]) }}</h1>
+                <h1 class="font-display mt-1 text-4xl sm:text-5xl">{{ __('Hi :name 👋', ['name' => Auth::user()->displayName()]) }}</h1>
                 <p class="mt-2 text-white/85">{{ __('Real people, real connections. Ready to meet someone new?') }}</p>
                 <a href="{{ route('discover') }}" wire:navigate class="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 shadow-lg transition hover:scale-105">
                     <flux:icon.sparkles class="size-4" /> {{ __('Start swiping') }}
@@ -89,6 +89,42 @@ new #[Title('Home')] class extends Component {
             </a>
         @endforeach
     </div>
+
+    {{-- Daily picks --}}
+    @php($picks = \App\Support\Discovery::dailyPicks(Auth::user()))
+    @if ($picks['pick'] || $picks['standouts']->isNotEmpty())
+        <div class="space-y-4 animate-fade-up [animation-delay:150ms]">
+            <div class="flex items-end justify-between">
+                <div>
+                    <h2 class="font-display text-3xl">{{ __('Today’s picks') }}</h2>
+                    <p class="text-sm text-zinc-500">{{ __('Chosen for you from your answers and preferences. New picks every day.') }}</p>
+                </div>
+                <flux:link :href="route('discover')" wire:navigate class="text-sm font-semibold">{{ __('See all') }}</flux:link>
+            </div>
+            <div class="flex snap-x gap-4 overflow-x-auto pb-3">
+                @foreach (collect([$picks['pick']])->filter()->merge($picks['standouts']) as $pick)
+                    <a href="{{ route('people.show', $pick) }}" wire:navigate wire:key="pick-{{ $pick->id }}"
+                        class="group relative w-56 shrink-0 snap-start overflow-hidden rounded-3xl shadow-lg">
+                        <x-member-photo :user="$pick" :small="false" class="aspect-[3/4] w-full transition duration-500 group-hover:scale-105" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent"></div>
+                        @if ($loop->first && $picks['pick'])
+                            <span class="absolute start-3 top-3 flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950"><flux:icon.star variant="solid" class="size-3.5" />{{ __('Most Compatible') }}</span>
+                        @else
+                            <span class="absolute start-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-zinc-900">{{ __('Standout') }}</span>
+                        @endif
+                        <div class="absolute inset-x-0 bottom-0 p-4 text-white">
+                            <p class="font-display text-2xl">{{ $pick->displayName() }}, {{ $pick->age() }}</p>
+                            @if ($prompt = $pick->prompts->first())
+                                <p class="mt-1 line-clamp-2 text-xs text-white/85">{{ $prompt->answer }}</p>
+                            @else
+                                <p class="text-xs text-white/80">{{ $pick->profile->location() }}</p>
+                            @endif
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     {{-- Checklist --}}
     <div class="hw-card p-6 animate-fade-up [animation-delay:200ms]">

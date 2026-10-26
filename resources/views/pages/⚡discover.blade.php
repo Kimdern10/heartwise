@@ -2,7 +2,10 @@
 
 use App\Actions\Dating\LikeUser;
 use App\Exceptions\DatingActionException;
+use App\Livewire\Concerns\LikesProfiles;
+use App\Models\ProfileView;
 use App\Models\User;
+use App\Models\UserMatch;
 use App\Support\Discovery;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -10,13 +13,12 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 new #[Title('Discover')] class extends Component {
-    use WithPagination;
+    use LikesProfiles;
 
     #[Url]
-    public string $view = 'swipe';
+    public string $view = 'feed';
 
     #[Url]
     public int $ageMin = 18;
@@ -28,17 +30,17 @@ new #[Title('Discover')] class extends Component {
     public string $state = '';
 
     #[Url]
-    public string $goal = '';
-
-    #[Url]
     public bool $verified = false;
 
-    #[Url]
-    public bool $hideSeen = true;
-
-    public function updated(): void
+    public function mount(): void
     {
-        $this->resetPage();
+        $profile = Auth::user()->profile;
+
+        // Start from the member's saved preferences unless the URL says otherwise.
+        if (! request()->has('ageMin') && $profile?->pref_age_min) {
+            $this->ageMin = $profile->pref_age_min;
+            $this->ageMax = $profile->pref_age_max ?? 99;
+        }
     }
 
     #[Computed]
@@ -48,20 +50,35 @@ new #[Title('Discover')] class extends Component {
             'age_min' => $this->ageMin,
             'age_max' => $this->ageMax,
             'state' => $this->state ?: null,
-            'goal' => $this->goal ?: null,
             'verified' => $this->verified,
-            // The swipe deck always skips people you already saw.
-            'hide_seen' => $this->view === 'swipe' ? true : $this->hideSeen,
-        ])->paginate($this->view === 'swipe' ? 3 : 12);
+        ])->with('prompts')->limit(3)->get();
+    }
+
+    /**
+     * Today's Most Compatible pick goes first in the feed, if not seen yet.
+     */
+    #[Computed]
+    public function dailyPick(): ?User
+    {
+        return Discovery::dailyPicks(Auth::user())['pick'];
+    }
+
+    #[Computed]
+    public function current(): ?User
+    {
+        // When the member is filtering, show what they asked for instead.
+        return ($this->activeFilters === 0 ? $this->dailyPick : null) ?? $this->people->first();
     }
 
     #[Computed]
     public function activeFilters(): int
     {
-        return (int) ($this->ageMin > 18) + (int) ($this->ageMax < 99) + (int) filled($this->state)
-            + (int) filled($this->goal) + (int) $this->verified;
+        return (int) ($this->ageMin > 18) + (int) ($this->ageMax < 99) + (int) filled($this->state) + (int) $this->verified;
     }
 
+    /**
+     * Swipe mode: like or pass without a comment.
+     */
     public function react(int $userId, bool $liked, LikeUser $likeUser): void
     {
         $target = User::findOrFail($userId);
@@ -75,90 +92,138 @@ new #[Title('Discover')] class extends Component {
             return;
         }
 
-        unset($this->people);
+        $this->refreshPeople();
 
         if ($match) {
             $this->dispatch('matched', name: $target->displayName(), url: route('messages.show', $match));
         }
     }
 
+    protected function afterLike(User $target, ?UserMatch $match): void
+    {
+        $this->refreshPeople();
+
+        if ($match) {
+            $this->dispatch('matched', name: $target->displayName(), url: route('messages.show', $match));
+        } else {
+            Flux::toast(variant: 'success', text: __('Like sent to :name.', ['name' => $target->displayName()]));
+        }
+    }
+
+    protected function afterPass(): void
+    {
+        $this->refreshPeople();
+    }
+
+    public function updated(): void
+    {
+        $this->refreshPeople();
+    }
+
     public function resetFilters(): void
     {
-        $this->reset('ageMin', 'ageMax', 'state', 'goal', 'verified', 'hideSeen');
-        $this->resetPage();
+        $this->reset('ageMin', 'ageMax', 'state', 'verified');
+        $this->refreshPeople();
+    }
+
+    private function refreshPeople(): void
+    {
+        unset($this->people, $this->dailyPick, $this->current);
+        $this->dispatch('feed-advanced');
+    }
+
+    public function rendered(): void
+    {
+        if ($this->view === 'feed' && $this->current) {
+            ProfileView::record(Auth::user(), $this->current);
+        }
     }
 }; ?>
 
-@php($me = Auth::user()->profile)
-
-<section class="mx-auto w-full max-w-6xl space-y-6" x-data="{ filters: false }">
+<section class="mx-auto w-full max-w-6xl space-y-6" x-data="{ filters: false }" x-on:feed-advanced.window="window.scrollTo({ top: 0, behavior: 'smooth' })">
     <div class="flex flex-wrap items-end justify-between gap-4 animate-fade-up">
         <div>
-            <flux:heading size="xl" level="1" class="!text-3xl !font-extrabold">{{ __('Discover') }}</flux:heading>
-            <flux:subheading size="lg">{{ __('Swipe right to like, left to pass. Mutual likes become matches.') }}</flux:subheading>
+            <flux:heading size="xl" level="1" class="font-display !text-4xl">{{ __('Discover') }}</flux:heading>
+            <flux:subheading size="lg">{{ $view === 'feed' ? __('Like a photo or answer that catches your eye — add a comment to stand out.') : __('Swipe right to like, left to pass.') }}</flux:subheading>
         </div>
 
         <div class="flex items-center gap-2">
-            <div class="glass flex rounded-full p-1 text-sm font-semibold">
-                <button type="button" wire:click="$set('view', 'swipe')" class="flex items-center gap-1.5 rounded-full px-4 py-1.5 transition {{ $view === 'swipe' ? 'bg-brand-gradient text-white shadow' : 'text-zinc-600 dark:text-zinc-300' }}">
-                    <flux:icon.rectangle-stack class="size-4" /> {{ __('Swipe') }}
-                </button>
-                <button type="button" wire:click="$set('view', 'grid')" class="flex items-center gap-1.5 rounded-full px-4 py-1.5 transition {{ $view === 'grid' ? 'bg-brand-gradient text-white shadow' : 'text-zinc-600 dark:text-zinc-300' }}">
-                    <flux:icon.squares-2x2 class="size-4" /> {{ __('Grid') }}
-                </button>
+            <div class="flex rounded-full bg-zinc-100 p-1 text-sm font-semibold dark:bg-zinc-800">
+                @foreach (['feed' => ['rectangle-stack', __('Profiles')], 'swipe' => ['hand-raised', __('Swipe')]] as $mode => [$icon, $label])
+                    <button type="button" wire:click="$set('view', '{{ $mode }}')"
+                        class="flex items-center gap-1.5 rounded-full px-4 py-1.5 transition {{ $view === $mode ? 'bg-white text-zinc-900 shadow dark:bg-zinc-950 dark:text-white' : 'text-zinc-500' }}">
+                        <flux:icon :name="$icon" class="size-4" /> {{ $label }}
+                    </button>
+                @endforeach
             </div>
             <flux:button icon="adjustments-horizontal" x-on:click="filters = ! filters">
-                {{ __('Filters') }}
-                @if ($this->activeFilters)
-                    <flux:badge size="sm" color="rose" class="ms-1">{{ $this->activeFilters }}</flux:badge>
-                @endif
+                @if ($this->activeFilters)<flux:badge size="sm" class="ms-1">{{ $this->activeFilters }}</flux:badge>@endif
             </flux:button>
+            <flux:button icon="magnifying-glass" :href="route('search')" wire:navigate>{{ __('Search') }}</flux:button>
         </div>
     </div>
 
     <div x-show="filters" x-collapse x-cloak>
-        <div class="hw-card grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
-            <div class="grid grid-cols-2 gap-3 lg:col-span-2">
-                <flux:input type="number" wire:model.live.debounce.500ms="ageMin" :label="__('Age from')" min="18" max="99" />
-                <flux:input type="number" wire:model.live.debounce.500ms="ageMax" :label="__('Age to')" min="18" max="99" />
-            </div>
+        <div class="hw-card grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+            <flux:input type="number" wire:model.live.debounce.500ms="ageMin" :label="__('Age from')" min="18" max="99" />
+            <flux:input type="number" wire:model.live.debounce.500ms="ageMax" :label="__('Age to')" min="18" max="99" />
             <flux:select wire:model.live="state" :label="__('State')">
                 <flux:select.option value="">{{ __('Anywhere in the US') }}</flux:select.option>
                 @foreach (config('dating.us_states') as $code => $name)
                     <flux:select.option :value="$code">{{ $name }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <flux:select wire:model.live="goal" :label="__('Looking for')">
-                <flux:select.option value="">{{ __('Any') }}</flux:select.option>
-                @foreach (\App\Enums\RelationshipGoal::cases() as $option)
-                    <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
-                @endforeach
-            </flux:select>
             <div class="flex flex-col justify-end gap-2">
                 <flux:checkbox wire:model.live="verified" :label="__('Verified only')" />
-                @if ($view === 'grid')
-                    <flux:checkbox wire:model.live="hideSeen" :label="__('Hide people I saw')" />
-                @endif
-                <button type="button" wire:click="resetFilters" class="self-start text-xs font-semibold text-brand-600 hover:underline">{{ __('Reset filters') }}</button>
+                <div class="flex gap-3 text-xs font-semibold">
+                    <button type="button" wire:click="resetFilters" class="hover:underline">{{ __('Reset') }}</button>
+                    <a href="{{ route('preferences') }}" wire:navigate class="hover:underline">{{ __('Dealbreakers →') }}</a>
+                </div>
             </div>
         </div>
     </div>
 
-    @if ($this->people->isEmpty())
+    @if (! $this->current)
         <div class="hw-card mx-auto max-w-md px-6 py-14 text-center animate-pop">
-            <div class="bg-brand-gradient mx-auto flex size-16 items-center justify-center rounded-full shadow-lg shadow-brand-500/30 animate-float">
-                <flux:icon.sparkles class="size-8 text-white" />
+            <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-zinc-900 text-white animate-float dark:bg-white dark:text-zinc-900">
+                <flux:icon.sparkles class="size-8" />
             </div>
-            <flux:heading size="lg" class="mt-5">{{ __('You’ve seen everyone for now') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Widen your filters or check back later — new members are approved every day.') }}</flux:text>
-            <flux:button class="mt-5" variant="primary" wire:click="resetFilters">{{ __('Reset filters') }}</flux:button>
+            <flux:heading size="lg" class="font-display mt-5 !text-2xl">{{ __('You’ve seen everyone for now') }}</flux:heading>
+            <flux:text class="mt-1">{{ __('Widen your filters or preferences, or check back later — new members are approved every day.') }}</flux:text>
+            <div class="mt-5 flex justify-center gap-2">
+                <flux:button wire:click="resetFilters">{{ __('Reset filters') }}</flux:button>
+                <flux:button variant="primary" :href="route('preferences')" wire:navigate>{{ __('Preferences') }}</flux:button>
+            </div>
         </div>
-    @elseif ($view === 'swipe')
+    @elseif ($view === 'feed')
+        @php($person = $this->current)
+        <div wire:key="feed-{{ $person->id }}" class="animate-fade-up pb-24">
+            @if ($this->dailyPick?->is($person))
+                <div class="mx-auto mb-3 flex max-w-xl items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-900 dark:bg-amber-500/15 dark:text-amber-300">
+                    <flux:icon.star variant="solid" class="size-4" /> {{ __('Most Compatible today — we think you two could really click.') }}
+                </div>
+            @endif
+
+            @include('partials.profile-feed', ['person' => $person, 'canLike' => true])
+
+            <div class="pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-between px-6 lg:bottom-8 lg:ps-72">
+                <button type="button" wire:click="passOn({{ $person->id }})" aria-label="{{ __('Skip') }}" data-test="skip-{{ $person->id }}"
+                    class="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-white text-zinc-700 shadow-xl ring-1 ring-zinc-200 transition hover:scale-110 active:scale-95 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-zinc-700">
+                    <flux:icon.x-mark class="size-7" />
+                </button>
+                <button type="button" wire:click="openLike({{ $person->id }})" aria-label="{{ __('Like') }}"
+                    class="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-xl transition hover:scale-110 active:scale-95 dark:bg-white dark:text-zinc-900">
+                    <flux:icon.heart variant="solid" class="size-7" />
+                </button>
+            </div>
+        </div>
+    @else
         {{-- Swipe deck: the first card is on top and can be dragged --}}
+        @php($deck = $this->people)
         <div class="mx-auto w-full max-w-sm">
             <div class="relative aspect-[3/4.2] w-full">
-                @foreach ($this->people->items() as $i => $person)
-                    @php($miles = $me?->milesFrom($person->profile))
+                @foreach ($deck as $i => $person)
+                    @php($miles = Auth::user()->profile?->milesFrom($person->profile))
                     <article wire:key="deck-{{ $person->id }}"
                         @if ($i === 0)
                             x-data="swipeCard({{ $person->id }})"
@@ -182,7 +247,7 @@ new #[Title('Discover')] class extends Component {
 
                             <div class="absolute inset-x-0 bottom-0 space-y-2 p-6 text-white">
                                 <div class="flex items-center gap-2">
-                                    <h2 class="text-3xl font-extrabold tracking-tight">{{ $person->displayName() }}</h2>
+                                    <h2 class="font-display text-4xl">{{ $person->displayName() }}</h2>
                                     <span class="text-2xl font-light">{{ $person->age() }}</span>
                                     <x-verified-badge :user="$person" class="size-6" />
                                     <x-location-badge :user="$person" class="size-5" />
@@ -191,10 +256,9 @@ new #[Title('Discover')] class extends Component {
                                     <flux:icon.map-pin class="size-4" /> {{ $person->profile->location() }}
                                     @if ($miles) · {{ trans_choice(':count mile away|:count miles away', $miles) }} @endif
                                 </p>
-                                @if ($person->profile->relationship_goal)
-                                    <span class="inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur">{{ $person->profile->relationship_goal->label() }}</span>
-                                @endif
-                                @if ($person->profile->bio)
+                                @if ($prompt = $person->prompts->first())
+                                    <p class="line-clamp-2 text-sm text-white/85"><span class="opacity-70">{{ $prompt->prompt }}:</span> {{ $prompt->answer }}</p>
+                                @elseif ($person->profile->bio)
                                     <p class="line-clamp-2 text-sm text-white/80">{{ $person->profile->bio }}</p>
                                 @endif
                                 <x-sample-badge :user="$person" />
@@ -208,47 +272,24 @@ new #[Title('Discover')] class extends Component {
                 @endforeach
             </div>
 
-            @php($top = $this->people->items()[0])
+            @php($top = $deck->first())
             <div class="mt-8 flex items-center justify-center gap-5">
                 <button type="button" wire:click="react({{ $top->id }}, false)" aria-label="{{ __('Pass') }}"
-                    class="flex size-16 items-center justify-center rounded-full bg-white text-rose-500 shadow-xl shadow-black/10 transition hover:scale-110 active:scale-95 dark:bg-zinc-800">
+                    class="flex size-16 items-center justify-center rounded-full bg-white text-zinc-700 shadow-xl ring-1 ring-zinc-200 transition hover:scale-110 active:scale-95 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700">
                     <flux:icon.x-mark class="size-8" />
                 </button>
-                <a href="{{ route('people.show', $top) }}" wire:navigate aria-label="{{ __('View profile') }}"
-                    class="flex size-12 items-center justify-center rounded-full bg-white text-sky-500 shadow-lg shadow-black/10 transition hover:scale-110 dark:bg-zinc-800">
-                    <flux:icon.eye class="size-6" />
-                </a>
+                <button type="button" wire:click="openLike({{ $top->id }})" aria-label="{{ __('Like with a comment') }}"
+                    class="flex size-12 items-center justify-center rounded-full bg-white text-amber-500 shadow-lg ring-1 ring-zinc-200 transition hover:scale-110 dark:bg-zinc-800 dark:ring-zinc-700">
+                    <flux:icon.chat-bubble-left class="size-6" />
+                </button>
                 <button type="button" wire:click="react({{ $top->id }}, true)" aria-label="{{ __('Like') }}" data-test="like-{{ $top->id }}"
-                    class="bg-brand-gradient flex size-16 items-center justify-center rounded-full text-white shadow-xl shadow-brand-500/40 transition hover:scale-110 active:scale-95">
+                    class="flex size-16 items-center justify-center rounded-full bg-zinc-900 text-white shadow-xl transition hover:scale-110 active:scale-95 dark:bg-white dark:text-zinc-900">
                     <flux:icon.heart variant="solid" class="size-8" />
                 </button>
             </div>
             <p class="mt-4 text-center text-xs text-zinc-500">{{ __('Tip: drag the card left or right') }}</p>
         </div>
-    @else
-        <div class="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            @foreach ($this->people as $person)
-                @php($miles = $me?->milesFrom($person->profile))
-                <article wire:key="person-{{ $person->id }}" class="hw-card hw-card--hover group overflow-hidden">
-                    <a href="{{ route('people.show', $person) }}" wire:navigate class="relative block">
-                        <x-member-photo :user="$person" class="aspect-[4/5] w-full transition duration-500 group-hover:scale-[1.03]" />
-                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-4 text-white">
-                            <div class="flex items-center gap-1.5 text-lg font-bold">
-                                {{ $person->displayName() }}, {{ $person->age() }}
-                                <x-verified-badge :user="$person" class="size-5" />
-                                <x-location-badge :user="$person" class="size-4" />
-                            </div>
-                            <p class="text-xs text-white/80">{{ $person->profile->location() }}@if ($miles) · {{ $miles }} mi @endif</p>
-                        </div>
-                    </a>
-                    <div class="flex gap-2 p-3">
-                        <flux:button class="flex-1" icon="x-mark" wire:click="react({{ $person->id }}, false)">{{ __('Pass') }}</flux:button>
-                        <flux:button class="flex-1" variant="primary" icon="heart" wire:click="react({{ $person->id }}, true)" data-test="like-{{ $person->id }}">{{ __('Like') }}</flux:button>
-                    </div>
-                </article>
-            @endforeach
-        </div>
-
-        {{ $this->people->links() }}
     @endif
+
+    @include('partials.like-modal')
 </section>

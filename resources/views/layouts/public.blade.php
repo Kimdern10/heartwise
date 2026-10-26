@@ -6,7 +6,7 @@
             <meta name="description" content="{{ $description }}" />
         @endisset
     </head>
-    <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+    <body class="app-canvas flex min-h-screen flex-col text-zinc-900 antialiased dark:text-zinc-100">
         <header class="sticky top-0 z-40" x-data="{ scrolled: false }" x-on:scroll.window="scrolled = window.scrollY > 10">
             <div class="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-4 rounded-full px-4 py-3 transition-all duration-300"
                 x-bind:class="scrolled ? 'glass mx-3 shadow-lg shadow-black/5 md:mx-auto' : ''">

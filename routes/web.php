@@ -23,6 +23,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware('profile.complete')->group(function () {
         Route::livewire('discover', 'pages::discover')->name('discover');
+        Route::livewire('search', 'pages::search')->name('search');
+        Route::livewire('activity/{tab?}', 'pages::activity')->whereIn('tab', ['likes', 'views', 'favorites'])->name('activity');
+        Route::livewire('preferences', 'pages::preferences')->name('preferences');
         Route::livewire('people/{user}', 'pages::people.show')->name('people.show');
         Route::livewire('matches', 'pages::matches')->name('matches');
         Route::livewire('messages', 'pages::messages.index')->name('messages.index');

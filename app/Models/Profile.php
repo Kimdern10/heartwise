@@ -33,11 +33,29 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $location_verified_at
  * @property bool $is_visible
  * @property bool $show_last_active
+ * @property bool $browse_privately
+ * @property string|null $job_title
+ * @property string|null $school
+ * @property string|null $education
+ * @property string|null $religion
+ * @property string|null $politics
+ * @property string|null $has_kids
+ * @property string|null $wants_kids
+ * @property string|null $drinking
+ * @property string|null $smoking
+ * @property list<string>|null $interests
+ * @property int|null $pref_age_min
+ * @property int|null $pref_age_max
+ * @property int|null $pref_max_miles
+ * @property list<string>|null $dealbreakers
+ * @property array<string, list<string>>|null $pref_values
  * @property-read User $user
  */
 #[Fillable([
     'display_name', 'gender', 'seeking', 'relationship_goal', 'bio', 'city', 'state',
-    'height_cm', 'is_visible', 'show_last_active',
+    'height_cm', 'is_visible', 'show_last_active', 'browse_privately',
+    'job_title', 'school', 'education', 'religion', 'politics', 'has_kids', 'wants_kids', 'drinking', 'smoking',
+    'interests', 'pref_age_min', 'pref_age_max', 'pref_max_miles', 'dealbreakers', 'pref_values',
 ])]
 class Profile extends Model
 {
@@ -49,6 +67,7 @@ class Profile extends Model
         'status' => 'pending',
         'is_visible' => true,
         'show_last_active' => true,
+        'browse_privately' => false,
     ];
 
     protected function casts(): array
@@ -64,7 +83,44 @@ class Profile extends Model
             'location_verified_at' => 'datetime',
             'is_visible' => 'boolean',
             'show_last_active' => 'boolean',
+            'browse_privately' => 'boolean',
+            'interests' => 'array',
+            'dealbreakers' => 'array',
+            'pref_values' => 'array',
         ];
+    }
+
+    /**
+     * Filled-in lifestyle details as [key => [label, value label, icon]].
+     *
+     * @return array<string, array{label: string, value: string, icon: string}>
+     */
+    public function vitals(): array
+    {
+        $vitals = [];
+
+        foreach (config('profile_options.vitals') as $key => $vital) {
+            if ($this->{$key} && isset($vital['options'][$this->{$key}])) {
+                $vitals[$key] = ['label' => $vital['label'], 'value' => $vital['options'][$this->{$key}], 'icon' => $vital['icon']];
+            }
+        }
+
+        return $vitals;
+    }
+
+    public function hasDealbreaker(string $key): bool
+    {
+        return in_array($key, $this->dealbreakers ?? [], true);
+    }
+
+    /**
+     * Preferred values for a vital (e.g. religions this member is open to).
+     *
+     * @return list<string>
+     */
+    public function preferred(string $key): array
+    {
+        return array_values($this->pref_values[$key] ?? []);
     }
 
     /** @return BelongsTo<User, $this> */

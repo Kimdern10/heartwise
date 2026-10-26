@@ -28,7 +28,7 @@ new #[Title('Messages')] class extends Component {
 <section class="mx-auto w-full max-w-3xl space-y-6" wire:poll.15s>
     <div class="flex flex-wrap items-end justify-between gap-4 animate-fade-up">
         <div>
-            <flux:heading size="xl" level="1" class="!text-3xl !font-extrabold">{{ __('Messages') }}</flux:heading>
+            <flux:heading size="xl" level="1" class="font-display !text-4xl">{{ __('Messages') }}</flux:heading>
             <flux:subheading size="lg">{{ __('Chat with the people you matched with.') }}</flux:subheading>
         </div>
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search matches')" class="max-w-56" />
@@ -59,6 +59,9 @@ new #[Title('Messages')] class extends Component {
                         <div class="flex items-center gap-1.5">
                             <span class="font-bold">{{ $other->displayName() }}</span>
                             <x-verified-badge :user="$other" class="size-4" />
+                            @if (! $match->latestMessage || $match->latestMessage->sender_id !== Auth::id())
+                                <span class="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white dark:bg-white dark:text-zinc-900">{{ __('Your turn') }}</span>
+                            @endif
                             <span class="ms-auto text-xs text-zinc-500">{{ ($match->last_message_at ?? $match->created_at)->diffForHumans(short: true) }}</span>
                         </div>
                         <p class="truncate text-sm {{ $match->unread_count ? 'font-semibold text-zinc-900 dark:text-white' : 'text-zinc-500' }}">

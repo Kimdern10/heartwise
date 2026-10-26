@@ -5,13 +5,16 @@
     </head>
     <body class="app-canvas min-h-screen text-zinc-900 antialiased dark:text-zinc-100">
         @php($unread = auth()->user()->unreadMessagesCount())
+        @php($pendingLikes = \App\Models\Like::query()->where('target_id', auth()->id())->where('liked', true)
+            ->whereNotIn('user_id', \App\Models\Like::query()->where('user_id', auth()->id())->select('target_id'))->count())
         @php($nav = [
-            ['dashboard', 'dashboard', 'home', __('Home')],
             ['discover', 'discover,people.show', 'sparkles', __('Discover')],
-            ['matches', 'matches', 'heart', __('Matches')],
+            ['activity', 'activity', 'heart', __('Likes')],
+            ['matches', 'matches', 'user-group', __('Matches')],
             ['messages.index', 'messages.*', 'chat-bubble-left-right', __('Messages')],
-            ['my-profile.edit', 'my-profile.*', 'user-circle', __('Profile')],
+            ['my-profile.edit', 'my-profile.*,preferences', 'user-circle', __('Profile')],
         ])
+        @php($badges = ['messages.index' => $unread, 'activity' => $pendingLikes])
 
         <flux:sidebar sticky collapsible="mobile" class="glass border-e-0 lg:m-3 lg:h-[calc(100svh-1.5rem)] lg:rounded-3xl lg:shadow-xl lg:shadow-brand-500/5">
             <flux:sidebar.header>
@@ -21,12 +24,17 @@
 
             <flux:sidebar.nav>
                 <flux:sidebar.group class="grid gap-1">
+                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Home') }}</flux:sidebar.item>
                     @foreach ($nav as [$route, $active, $icon, $label])
                         <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs(...explode(',', $active))"
-                            :badge="$route === 'messages.index' && $unread ? $unread : null" wire:navigate>
+                            :badge="($badges[$route] ?? 0) ?: null" wire:navigate>
                             {{ $label }}
                         </flux:sidebar.item>
+                        @if ($route === 'discover')
+                            <flux:sidebar.item icon="magnifying-glass" :href="route('search')" :current="request()->routeIs('search')" wire:navigate>{{ __('Search') }}</flux:sidebar.item>
+                        @endif
                     @endforeach
+                    <flux:sidebar.item icon="adjustments-horizontal" :href="route('preferences')" :current="request()->routeIs('preferences')" wire:navigate>{{ __('Preferences') }}</flux:sidebar.item>
                 </flux:sidebar.group>
 
                 @if (auth()->user()->is_admin)
@@ -105,8 +113,8 @@
                     class="relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition {{ $isActive ? 'text-brand-600 dark:text-brand-400' : 'text-zinc-500' }}">
                     <flux:icon :name="$icon" :variant="$isActive ? 'solid' : 'outline'" class="size-6 transition {{ $isActive ? 'scale-110' : '' }}" />
                     {{ $label }}
-                    @if ($route === 'messages.index' && $unread)
-                        <span class="bg-brand-gradient absolute end-[22%] top-0.5 flex size-4 items-center justify-center rounded-full text-[10px] text-white">{{ $unread }}</span>
+                    @if ($badges[$route] ?? 0)
+                        <span class="bg-brand-gradient absolute end-[22%] top-0.5 flex size-4 items-center justify-center rounded-full text-[10px] text-white">{{ $badges[$route] }}</span>
                     @endif
                 </a>
             @endforeach
