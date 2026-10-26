@@ -69,7 +69,14 @@ new #[Title('Members')] class extends Component {
             @foreach ($this->members as $member)
                 <flux:table.row :key="$member->id">
                     <flux:table.cell>
-                        <div class="flex items-center gap-1">{{ $member->displayName() }} <x-verified-badge :user="$member" class="size-4" /></div>
+                        <div class="flex items-center gap-1">
+                            @if ($member->profile)
+                                <a href="{{ route('people.show', $member) }}" wire:navigate class="font-semibold underline-offset-2 hover:underline">{{ $member->displayName() }}</a>
+                            @else
+                                {{ $member->displayName() }}
+                            @endif
+                            <x-verified-badge :user="$member" class="size-4" />
+                        </div>
                         <span class="text-xs text-zinc-500">{{ $member->email }}</span>
 
                         @if ($member->subscribed('premium')) <flux:badge size="sm" color="amber">{{ __('Premium') }}</flux:badge> @endif

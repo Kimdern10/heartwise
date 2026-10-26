@@ -23,6 +23,7 @@ new class extends Component {
         $viewer = Auth::user();
 
         $visible = $viewer->is($user)
+            || ($viewer->is_admin && $user->profile()->exists())
             || (User::query()->discoverable()->whereKey($user->id)->exists() && ! $viewer->hasBlockBetween($user));
 
         abort_unless($visible, 404);
@@ -35,7 +36,14 @@ new class extends Component {
     #[Computed]
     public function person(): User
     {
-        return User::with(['profile', 'approvedPhotos', 'prompts'])->findOrFail($this->personId);
+        $person = User::with(['profile', 'approvedPhotos', 'prompts'])->findOrFail($this->personId);
+
+        // Admins reviewing a profile see every photo, including ones still waiting for review.
+        if (Auth::user()->is_admin) {
+            $person->setRelation('approvedPhotos', $person->photos()->get());
+        }
+
+        return $person;
     }
 
     #[Computed]
@@ -100,11 +108,27 @@ new class extends Component {
 }; ?>
 
 @php($person = $this->person)
-@php($isMe = Auth::user()->is($person))
+@php($isAdmin = Auth::user()->is_admin)
+{{-- For admins the page is a read-only review: no likes, favorites or reports. --}}
+@php($isMe = Auth::user()->is($person) || $isAdmin)
 @php($canLike = ! $isMe && ! $this->match && ! $this->myLike?->liked)
 
 <section class="w-full pb-24">
-    <div class="mx-auto mb-2 flex max-w-xl items-center justify-between">
+    @if ($isAdmin)
+        <div class="mx-auto mb-4 max-w-xl space-y-3 rounded-3xl bg-zinc-900 p-5 text-white dark:bg-white dark:text-zinc-900">
+            <p class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider opacity-70"><flux:icon.shield-check class="size-4" /> {{ __('Admin review') }}</p>
+            <p class="font-semibold">{{ $person->name }} · {{ $person->email }}</p>
+            <p class="text-sm opacity-80">
+                {{ __('Profile: :status', ['status' => $person->profile->status->label()]) }} ·
+                {{ __('Account: :status', ['status' => $person->status->label()]) }} ·
+                {{ __('Joined :date', ['date' => $person->created_at->toFormattedDateString()]) }}
+                @if ($person->flag_reason) · <span class="font-semibold text-amber-400 dark:text-amber-600">{{ __('Flagged: :r', ['r' => $person->flag_reason]) }}</span> @endif
+            </p>
+            <flux:button size="sm" icon="arrow-left" :href="route('admin.users')" wire:navigate>{{ __('Back to members') }}</flux:button>
+        </div>
+    @endif
+
+    <div class="mx-auto mb-2 flex max-w-xl items-center justify-between {{ $isAdmin ? 'hidden' : '' }}">
         <flux:button size="sm" variant="ghost" icon="arrow-left" x-on:click="history.length > 1 ? history.back() : Livewire.navigate('{{ route('discover') }}')">{{ __('Back') }}</flux:button>
         @unless ($isMe)
             <flux:button size="sm" variant="ghost" icon="star" wire:click="toggleFavorite" data-test="favorite-button"

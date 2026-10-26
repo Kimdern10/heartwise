@@ -4,46 +4,78 @@
         @include('partials.head')
     </head>
     <body class="app-canvas min-h-screen text-zinc-900 antialiased dark:text-zinc-100">
-        @php($unread = auth()->user()->unreadMessagesCount())
-        @php($pendingLikes = \App\Models\Like::query()->where('target_id', auth()->id())->where('liked', true)
-            ->whereNotIn('user_id', \App\Models\Like::query()->where('user_id', auth()->id())->select('target_id'))->count())
-        @php($nav = [
-            ['discover', 'discover,people.show', 'sparkles', __('Discover')],
-            ['activity', 'activity', 'heart', __('Likes')],
-            ['matches', 'matches', 'user-group', __('Matches')],
-            ['messages.index', 'messages.*', 'chat-bubble-left-right', __('Messages')],
-            ['my-profile.edit', 'my-profile.*,preferences', 'user-circle', __('Profile')],
-        ])
-        @php($badges = ['messages.index' => $unread, 'activity' => $pendingLikes])
+        @php($isAdmin = auth()->user()->is_admin)
+        @php($home = $isAdmin ? route('admin.dashboard') : route('dashboard'))
+
+        @if ($isAdmin)
+            {{-- Admins run the site; they don't use the dating features. --}}
+            @php($nav = [])
+            @php($counts = [
+                'profiles' => \App\Models\Profile::where('status', 'pending')->count(),
+                'photos' => \App\Models\Photo::where('status', 'pending')->count(),
+                'verifications' => \App\Models\VerificationRequest::where('status', 'pending')->count(),
+                'reports' => \App\Models\Report::where('status', 'open')->count(),
+            ])
+            @php($adminNav = [
+                ['admin.dashboard', 'chart-bar', __('Overview'), null],
+                ['admin.profiles', 'user-circle', __('Profiles to review'), $counts['profiles']],
+                ['admin.photos', 'photo', __('Photos to review'), $counts['photos']],
+                ['admin.verifications', 'check-badge', __('Selfie checks'), $counts['verifications']],
+                ['admin.reports', 'flag', __('Reports'), $counts['reports']],
+                ['admin.messages', 'shield-exclamation', __('Flagged messages'), null],
+                ['admin.users', 'user-group', __('Members'), null],
+                ['admin.security', 'globe-americas', __('Security / VPN'), null],
+            ])
+        @else
+            @php($unread = auth()->user()->unreadMessagesCount())
+            @php($pendingLikes = \App\Models\Like::query()->where('target_id', auth()->id())->where('liked', true)
+                ->whereNotIn('user_id', \App\Models\Like::query()->where('user_id', auth()->id())->select('target_id'))->count())
+            @php($nav = [
+                ['discover', 'discover,people.show', 'sparkles', __('Discover')],
+                ['activity', 'activity', 'heart', __('Likes')],
+                ['matches', 'matches', 'user-group', __('Matches')],
+                ['messages.index', 'messages.*', 'chat-bubble-left-right', __('Messages')],
+                ['my-profile.edit', 'my-profile.*,preferences', 'user-circle', __('Profile')],
+            ])
+            @php($badges = ['messages.index' => $unread, 'activity' => $pendingLikes])
+        @endif
 
         <flux:sidebar sticky collapsible="mobile" class="glass border-e-0 lg:m-3 lg:h-[calc(100svh-1.5rem)] lg:rounded-3xl lg:shadow-xl lg:shadow-brand-500/5">
             <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                <x-app-logo :sidebar="true" href="{{ $home }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
-            <flux:sidebar.nav>
-                <flux:sidebar.group class="grid gap-1">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Home') }}</flux:sidebar.item>
-                    @foreach ($nav as [$route, $active, $icon, $label])
-                        <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs(...explode(',', $active))"
-                            :badge="($badges[$route] ?? 0) ?: null" wire:navigate>
-                            {{ $label }}
-                        </flux:sidebar.item>
-                        @if ($route === 'discover')
-                            <flux:sidebar.item icon="magnifying-glass" :href="route('search')" :current="request()->routeIs('search')" wire:navigate>{{ __('Search') }}</flux:sidebar.item>
-                        @endif
-                    @endforeach
-                    <flux:sidebar.item icon="adjustments-horizontal" :href="route('preferences')" :current="request()->routeIs('preferences')" wire:navigate>{{ __('Preferences') }}</flux:sidebar.item>
-                    <flux:sidebar.item icon="star" :href="route('premium')" :current="request()->routeIs('premium')" wire:navigate>
-                        {{ auth()->user()->isPremium() ? __('Premium ✓') : __('Get Premium') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
+            @if ($isAdmin)
+                <div class="mx-2 mb-1 flex items-center gap-2 rounded-xl bg-zinc-900 px-3 py-2 text-xs font-bold uppercase tracking-wider text-white dark:bg-white dark:text-zinc-900">
+                    <flux:icon.shield-check class="size-4" /> {{ __('Admin panel') }}
+                </div>
+            @endif
 
-                @if (auth()->user()->is_admin)
-                    <flux:sidebar.group :heading="__('Admin')" class="grid">
-                        <flux:sidebar.item icon="shield-check" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')" wire:navigate>
-                            {{ __('Moderation') }}
+            <flux:sidebar.nav>
+                @if ($isAdmin)
+                    <flux:sidebar.group class="grid gap-1">
+                        @foreach ($adminNav as [$route, $icon, $label, $count])
+                            <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs($route)" :badge="$count ?: null" wire:navigate>
+                                {{ $label }}
+                            </flux:sidebar.item>
+                        @endforeach
+                    </flux:sidebar.group>
+                @else
+                    <flux:sidebar.group class="grid gap-1">
+                        <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Home') }}</flux:sidebar.item>
+                        @foreach ($nav as [$route, $active, $icon, $label])
+                            <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs(...explode(',', $active))"
+                                :badge="($badges[$route] ?? 0) ?: null" wire:navigate>
+                                {{ $label }}
+                            </flux:sidebar.item>
+                            @if ($route === 'discover')
+                                <flux:sidebar.item icon="magnifying-glass" :href="route('search')" :current="request()->routeIs('search')" wire:navigate>{{ __('Search') }}</flux:sidebar.item>
+                            @endif
+                        @endforeach
+                        <flux:sidebar.item icon="adjustments-horizontal" :href="route('preferences')" :current="request()->routeIs('preferences')" wire:navigate>{{ __('Preferences') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="star" :href="route('premium')" :current="request()->routeIs('premium')" wire:navigate>
+                            {{ auth()->user()->subscribed('premium') ? __('Premium ✓') : __('Get Premium') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif
@@ -51,7 +83,7 @@
 
             <flux:spacer />
 
-            <div class="bg-brand-gradient relative hidden overflow-hidden rounded-2xl p-4 text-white lg:block">
+            <div class="bg-brand-gradient relative overflow-hidden rounded-2xl p-4 text-white {{ $isAdmin ? 'hidden' : 'hidden lg:block' }}">
                 <div class="absolute -end-6 -top-6 size-24 rounded-full bg-white/15 blur-xl"></div>
                 <flux:icon.shield-check class="size-6" />
                 <p class="mt-2 text-sm font-semibold">{{ __('Date safely') }}</p>
@@ -65,7 +97,7 @@
         <!-- Mobile top bar -->
         <flux:header class="glass sticky top-0 z-30 border-b-0 lg:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
-            <a href="{{ route('dashboard') }}" wire:navigate class="ms-2 flex items-center gap-2 font-bold">
+            <a href="{{ $home }}" wire:navigate class="ms-2 flex items-center gap-2 font-bold">
                 <span class="bg-brand-gradient flex size-7 items-center justify-center rounded-lg"><x-app-logo-icon class="size-4 text-white" /></span>
                 {{ config('app.name') }}
             </a>
@@ -109,7 +141,7 @@
         {{ $slot }}
 
         <!-- Mobile bottom tab bar -->
-        <nav class="glass fixed inset-x-3 bottom-3 z-40 flex justify-around rounded-2xl px-2 py-1.5 shadow-lg shadow-black/10 lg:hidden">
+        <nav class="glass fixed inset-x-3 bottom-3 z-40 flex justify-around rounded-2xl px-2 py-1.5 shadow-lg shadow-black/10 lg:hidden {{ $isAdmin ? '!hidden' : '' }}">
             @foreach ($nav as [$route, $active, $icon, $label])
                 @php($isActive = request()->routeIs(...explode(',', $active)))
                 <a href="{{ route($route) }}" wire:navigate

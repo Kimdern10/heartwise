@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureOnboarded;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\RedirectAdminsToPanel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
             'profile.complete' => EnsureProfileIsComplete::class,
             'onboarded' => EnsureOnboarded::class,
+            'member' => RedirectAdminsToPanel::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

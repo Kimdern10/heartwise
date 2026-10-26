@@ -32,6 +32,8 @@ trait ModeratesMembers
 
     private function moderate(callable $action, int $userId, string $done): void
     {
+        abort_unless(Auth::user()?->is_admin, 403);
+
         try {
             $action(app(ModerateUser::class), User::findOrFail($userId));
         } catch (DatingActionException $e) {
