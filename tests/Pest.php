@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +45,18 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Give a member an active Premium subscription without calling Stripe.
+ */
+function makePremium(User $user): User
 {
-    // ..
+    $user->subscriptions()->create([
+        'type' => 'premium',
+        'stripe_id' => 'sub_test_'.$user->id,
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_test',
+        'quantity' => 1,
+    ]);
+
+    return $user->fresh();
 }

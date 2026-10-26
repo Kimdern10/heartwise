@@ -28,6 +28,30 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Sign in with Google: console.cloud.google.com → APIs & Services → Credentials → OAuth client ID.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('APP_URL').'/auth/google/callback',
+    ],
+
+    // Sign in with Apple: needs a paid Apple Developer account and a live HTTPS domain.
+    // client_id is your Services ID; the secret is generated from the .p8 key below.
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID'),
+        'client_secret' => env('APPLE_CLIENT_SECRET'),
+        'key_id' => env('APPLE_KEY_ID'),
+        'team_id' => env('APPLE_TEAM_ID'),
+        'private_key' => env('APPLE_PRIVATE_KEY'),
+        'redirect' => env('APP_URL').'/auth/apple/callback',
+    ],
+
+    // IP intelligence used to spot VPNs, proxies and data centres (see App\Support\ConnectionInspector).
+    'ip_intel' => [
+        'driver' => env('IP_INTEL_DRIVER', 'proxycheck'),
+        'proxycheck_key' => env('PROXYCHECK_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

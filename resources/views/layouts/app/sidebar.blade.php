@@ -35,6 +35,9 @@
                         @endif
                     @endforeach
                     <flux:sidebar.item icon="adjustments-horizontal" :href="route('preferences')" :current="request()->routeIs('preferences')" wire:navigate>{{ __('Preferences') }}</flux:sidebar.item>
+                    <flux:sidebar.item icon="star" :href="route('premium')" :current="request()->routeIs('premium')" wire:navigate>
+                        {{ auth()->user()->isPremium() ? __('Premium ✓') : __('Get Premium') }}
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
 
                 @if (auth()->user()->is_admin)

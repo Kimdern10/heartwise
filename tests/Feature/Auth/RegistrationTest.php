@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
@@ -24,12 +25,10 @@ class RegistrationTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_new_users_can_register(): void
+    public function test_new_users_can_register_and_are_sent_to_onboarding(): void
     {
         $response = $this->post(route('register.store'), [
-            'name' => 'John Doe',
             'email' => 'test@example.com',
-            'date_of_birth' => now()->subYears(25)->toDateString(),
             'password' => 'password',
             'password_confirmation' => 'password',
             'terms' => '1',
@@ -39,43 +38,19 @@ class RegistrationTest extends TestCase
             ->assertRedirect(route('dashboard', absolute: false));
 
         $this->assertAuthenticated();
-    }
 
-    public function test_people_under_18_cannot_register(): void
-    {
-        $response = $this->post(route('register.store'), [
-            'name' => 'Too Young',
-            'email' => 'young@example.com',
-            'date_of_birth' => now()->subYears(18)->addDay()->toDateString(),
-            'password' => 'password',
-            'password_confirmation' => 'password',
-            'terms' => '1',
-        ]);
+        $user = User::where('email', 'test@example.com')->first();
+        $this->assertNull($user->onboarded_at);
+        $this->assertNotNull($user->terms_accepted_at);
 
-        $response->assertSessionHasErrors('date_of_birth');
-        $this->assertGuest();
-    }
-
-    public function test_people_who_turn_18_today_can_register(): void
-    {
-        $this->post(route('register.store'), [
-            'name' => 'Birthday Person',
-            'email' => 'birthday@example.com',
-            'date_of_birth' => now()->subYears(18)->toDateString(),
-            'password' => 'password',
-            'password_confirmation' => 'password',
-            'terms' => '1',
-        ])->assertSessionHasNoErrors();
-
-        $this->assertAuthenticated();
+        $user->markEmailAsVerified();
+        $this->actingAs($user->fresh())->get(route('dashboard'))->assertRedirect(route('onboarding'));
     }
 
     public function test_terms_must_be_accepted(): void
     {
         $this->post(route('register.store'), [
-            'name' => 'No Terms',
             'email' => 'noterms@example.com',
-            'date_of_birth' => now()->subYears(30)->toDateString(),
             'password' => 'password',
             'password_confirmation' => 'password',
         ])->assertSessionHasErrors('terms');

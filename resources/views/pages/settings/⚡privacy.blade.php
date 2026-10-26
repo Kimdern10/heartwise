@@ -67,7 +67,7 @@ new #[Title('Privacy settings')] class extends Component {
                 <flux:switch wire:model.live="isVisible" :label="__('Show my profile in Discover')"
                     :description="__('Turn off to take a break. Your matches can still message you.')" />
                 <flux:switch wire:model.live="showLastActive" :label="__('Show when I was last active')" />
-                <flux:switch wire:model.live="browsePrivately" :label="__('Browse privately')" :description="__('Don’t show up in other members’ “Viewed you” list.')" />
+                <flux:switch wire:model.live="browsePrivately" :disabled="! auth()->user()->isPremium()" :label="__('Browse privately (Premium)')" :description="__('Don’t show up in other members’ “Viewed you” list.')" />
             </div>
 
             <flux:separator variant="subtle" />

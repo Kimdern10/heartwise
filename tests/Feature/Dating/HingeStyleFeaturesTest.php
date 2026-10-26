@@ -59,7 +59,7 @@ test('one spark per day', function () {
     expect($a->hasSparkLeftToday())->toBeFalse();
 
     app(LikeUser::class)->handle($a, $c, true, spark: true);
-})->throws(DatingActionException::class, 'Spark');
+})->throws(DatingActionException::class, 'Sparks');
 
 test('the like modal sends a like from the profile page', function () {
     $me = User::factory()->discoverable()->create();
@@ -78,7 +78,7 @@ test('the like modal sends a like from the profile page', function () {
 });
 
 test('likes you lists people waiting for an answer, sparks first', function () {
-    $me = User::factory()->discoverable()->create();
+    $me = makePremium(User::factory()->discoverable()->create());
     [$a, $b] = User::factory()->discoverable()->count(2)->create();
     Like::create(['user_id' => $a->id, 'target_id' => $me->id, 'liked' => true, 'comment' => 'Hi from A']);
     Like::create(['user_id' => $b->id, 'target_id' => $me->id, 'liked' => true, 'is_spark' => true]);
@@ -98,13 +98,14 @@ test('likes you lists people waiting for an answer, sparks first', function () {
 test('profile views are recorded unless browsing privately', function () {
     [$me, $viewer, $private] = User::factory()->discoverable()->count(3)->create();
     $private->profile->update(['browse_privately' => true]);
+    makePremium($private);
 
     $this->actingAs($viewer)->get(route('people.show', $me))->assertOk();
     $this->actingAs($private)->get(route('people.show', $me))->assertOk();
 
     expect(ProfileView::where('viewed_id', $me->id)->pluck('viewer_id')->all())->toBe([$viewer->id]);
 
-    $this->actingAs($me)->get(route('activity', 'views'))->assertOk()->assertSee($viewer->displayName());
+    $this->actingAs(makePremium($me))->get(route('activity', 'views'))->assertOk()->assertSee($viewer->displayName());
 });
 
 test('members can favorite someone', function () {
@@ -204,7 +205,7 @@ test('preferences reject an impossible age range', function () {
 });
 
 test('advanced search filters by details and online status', function () {
-    $me = User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women])->create();
+    $me = makePremium(User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women])->create());
     User::factory()->discoverable(['display_name' => 'TallOnline', 'gender' => Gender::Woman, 'seeking' => Seeking::Men, 'height_cm' => 178, 'drinking' => 'no'])
         ->create(['last_active_at' => now()]);
     User::factory()->discoverable(['display_name' => 'ShortAway', 'gender' => Gender::Woman, 'seeking' => Seeking::Men, 'height_cm' => 155, 'drinking' => 'yes'])

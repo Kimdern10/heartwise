@@ -126,7 +126,7 @@ class LikeUser
     private function checkLimits(User $user, bool $spark): void
     {
         if ($spark && ! $user->hasSparkLeftToday()) {
-            throw new DatingActionException('You have used today’s Spark. You get a new one tomorrow.');
+            throw new DatingActionException('You have used today’s Sparks. You get more tomorrow.');
         }
 
         $perMinute = config('dating.limits.likes_per_minute');
@@ -141,8 +141,8 @@ class LikeUser
             ->where('updated_at', '>=', now()->startOfDay())
             ->count();
 
-        if ($today >= config('dating.limits.likes_per_day')) {
-            throw new DatingActionException('You have used all your likes for today. They reset at midnight.');
+        if ($today >= $user->likesPerDay()) {
+            throw new DatingActionException($user->isPremium() ? 'You have reached today’s like limit. It resets at midnight.' : 'You have used your free likes for today. They reset at midnight — or get Premium for unlimited likes.');
         }
     }
 }

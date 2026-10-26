@@ -128,9 +128,23 @@ new #[Title('Activity')] class extends Component {
         @if ($this->likes->isEmpty())
             @include('partials.empty-state', ['icon' => 'heart', 'title' => __('No new likes yet'), 'text' => __('Complete your prompts and add more photos — profiles with three prompts get more likes.')])
         @else
+            @php($premium = Auth::user()->isPremium())
+            @unless ($premium)
+                @include('partials.premium-upsell', ['text' => trans_choice('{1} :count person likes you.|[2,*] :count people like you.', $this->likes->count()).' '.__('Free members see one at a time (plus any Sparks). Get Premium to see everyone and match instantly.')])
+            @endunless
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($this->likes as $like)
                     @php($person = $like->user)
+                    @if (! $premium && ! $loop->first && ! $like->is_spark)
+                        <a href="{{ route('premium') }}" wire:navigate wire:key="like-locked-{{ $like->id }}" class="hw-card group relative block overflow-hidden" data-reveal>
+                            <div class="aspect-[4/5] w-full bg-gradient-to-br from-rose-200 via-zinc-300 to-violet-300 dark:from-rose-900 dark:via-zinc-700 dark:to-violet-900"></div>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/20 text-white">
+                                <flux:icon.lock-closed class="size-8" />
+                                <span class="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-zinc-900 transition group-hover:scale-105">{{ __('See with Premium') }}</span>
+                            </div>
+                        </a>
+                        @continue
+                    @endif
                     <article wire:key="like-{{ $like->id }}" class="hw-card overflow-hidden {{ $like->is_spark ? 'ring-2 ring-amber-400' : '' }}" data-reveal>
                         <a href="{{ route('people.show', $person) }}" wire:navigate class="relative block">
                             <x-member-photo :user="$person" class="aspect-[4/5] w-full" />
@@ -169,8 +183,22 @@ new #[Title('Activity')] class extends Component {
         @if ($this->views->isEmpty())
             @include('partials.empty-state', ['icon' => 'eye', 'title' => __('No profile views yet'), 'text' => __('When members look at your profile, they show up here.')])
         @else
+            @php($premium = Auth::user()->isPremium())
+            @unless ($premium)
+                @include('partials.premium-upsell', ['text' => trans_choice('{1} :count person viewed your profile.|[2,*] :count people viewed your profile.', $this->views->count()).' '.__('Get Premium to see who.')])
+            @endunless
             <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 @foreach ($this->views as $view)
+                    @unless ($premium)
+                        <a href="{{ route('premium') }}" wire:navigate wire:key="view-locked-{{ $loop->index }}" class="hw-card relative block overflow-hidden" data-reveal>
+                            <div class="aspect-square w-full bg-gradient-to-br from-rose-200 via-zinc-300 to-violet-300 dark:from-rose-900 dark:via-zinc-700 dark:to-violet-900"></div>
+                            <div class="p-3">
+                                <p class="font-semibold blur-sm select-none">{{ __('Someone') }}, ??</p>
+                                <p class="text-xs text-zinc-500">{{ __('Viewed :time', ['time' => $view->viewed_at->diffForHumans()]) }}</p>
+                            </div>
+                        </a>
+                        @continue
+                    @endunless
                     <a href="{{ route('people.show', $view->viewer) }}" wire:navigate wire:key="view-{{ $view->viewer_id }}" class="hw-card hw-card--hover block overflow-hidden" data-reveal>
                         <x-member-photo :user="$view->viewer" class="aspect-square w-full" />
                         <div class="p-3">

@@ -44,14 +44,22 @@ new #[Title('Search')] class extends Component {
     #[Computed]
     public function results()
     {
-        $query = Discovery::for(Auth::user(), [
+        $filters = [
             'age_min' => $this->ageMin, 'age_max' => $this->ageMax, 'state' => $this->state, 'goal' => $this->goal,
-            'height_min' => $this->heightMin, 'height_max' => $this->heightMax,
-            'religion' => $this->religion, 'education' => $this->education, 'has_kids' => $this->hasKids,
-            'wants_kids' => $this->wantsKids, 'drinking' => $this->drinking, 'smoking' => $this->smoking,
             'online' => $this->online, 'verified' => $this->verified, 'has_prompts' => $this->hasPrompts,
             'hide_seen' => $this->hideSeen,
-        ]);
+        ];
+
+        // Advanced filters are a Premium perk.
+        if (Auth::user()->isPremium()) {
+            $filters += [
+                'height_min' => $this->heightMin, 'height_max' => $this->heightMax,
+                'religion' => $this->religion, 'education' => $this->education, 'has_kids' => $this->hasKids,
+                'wants_kids' => $this->wantsKids, 'drinking' => $this->drinking, 'smoking' => $this->smoking,
+            ];
+        }
+
+        $query = Discovery::for(Auth::user(), $filters);
 
         if ($this->sort === 'newest') {
             $query->reorder()->latest('users.created_at');
@@ -120,21 +128,6 @@ new #[Title('Search')] class extends Component {
                     <flux:input type="number" size="sm" wire:model.live.debounce.500ms="ageMax" :label="__('to')" min="18" max="99" />
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <flux:select size="sm" wire:model.live="heightMin" :label="__('Height from')">
-                        <flux:select.option value="">{{ __('Any') }}</flux:select.option>
-                        @foreach (range(54, 82, 2) as $in)
-                            <flux:select.option :value="$in">{{ intdiv($in, 12) }}′{{ $in % 12 }}″</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    <flux:select size="sm" wire:model.live="heightMax" :label="__('to')">
-                        <flux:select.option value="">{{ __('Any') }}</flux:select.option>
-                        @foreach (range(56, 84, 2) as $in)
-                            <flux:select.option :value="$in">{{ intdiv($in, 12) }}′{{ $in % 12 }}″</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                </div>
-
                 <flux:select size="sm" wire:model.live="state" :label="__('State')">
                     <flux:select.option value="">{{ __('Anywhere in the US') }}</flux:select.option>
                     @foreach (config('dating.us_states') as $code => $name)
@@ -149,14 +142,42 @@ new #[Title('Search')] class extends Component {
                     @endforeach
                 </flux:select>
 
-                @foreach (['religion' => 'religion', 'education' => 'education', 'hasKids' => 'has_kids', 'wantsKids' => 'wants_kids', 'drinking' => 'drinking', 'smoking' => 'smoking'] as $prop => $key)
-                    <flux:select size="sm" wire:model.live="{{ $prop }}" :label="__($vitals[$key]['label'])" wire:key="f-{{ $prop }}">
-                        <flux:select.option value="">{{ __('Any') }}</flux:select.option>
-                        @foreach ($vitals[$key]['options'] as $value => $label)
-                            <flux:select.option :value="$value">{{ $label }}</flux:select.option>
+                {{-- Advanced filters (Premium) --}}
+                @php($premium = Auth::user()->isPremium())
+                <div class="space-y-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                    <div class="flex items-center justify-between">
+                        <p class="flex items-center gap-1.5 text-sm font-semibold"><flux:icon.sparkles variant="solid" class="size-4 text-amber-500" />{{ __('Advanced') }}</p>
+                        @unless ($premium)
+                            <a href="{{ route('premium') }}" wire:navigate class="text-xs font-semibold underline">{{ __('Unlock with Premium') }}</a>
+                        @endunless
+                    </div>
+
+                    <fieldset @disabled(! $premium) class="space-y-4 disabled:opacity-50">
+                        <div class="grid grid-cols-2 gap-3">
+                            <flux:select size="sm" wire:model.live="heightMin" :label="__('Height from')">
+                                <flux:select.option value="">{{ __('Any') }}</flux:select.option>
+                                @foreach (range(54, 82, 2) as $in)
+                                    <flux:select.option :value="$in">{{ intdiv($in, 12) }}′{{ $in % 12 }}″</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <flux:select size="sm" wire:model.live="heightMax" :label="__('to')">
+                                <flux:select.option value="">{{ __('Any') }}</flux:select.option>
+                                @foreach (range(56, 84, 2) as $in)
+                                    <flux:select.option :value="$in">{{ intdiv($in, 12) }}′{{ $in % 12 }}″</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                        </div>
+
+                        @foreach (['religion' => 'religion', 'education' => 'education', 'hasKids' => 'has_kids', 'wantsKids' => 'wants_kids', 'drinking' => 'drinking', 'smoking' => 'smoking'] as $prop => $key)
+                            <flux:select size="sm" wire:model.live="{{ $prop }}" :label="__($vitals[$key]['label'])" wire:key="f-{{ $prop }}">
+                                <flux:select.option value="">{{ __('Any') }}</flux:select.option>
+                                @foreach ($vitals[$key]['options'] as $value => $label)
+                                    <flux:select.option :value="$value">{{ $label }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
                         @endforeach
-                    </flux:select>
-                @endforeach
+                    </fieldset>
+                </div>
             </div>
         </aside>
 

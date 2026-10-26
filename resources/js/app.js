@@ -4,6 +4,17 @@
  */
 
 /* ---------------------------------------------------------------
+ * Device timezone → "tz" cookie. A VPN changes the IP address but not
+ * the device clock, so the server compares the two (see ConnectionInspector).
+ * ------------------------------------------------------------- */
+try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz) document.cookie = `tz=${encodeURIComponent(tz)};path=/;max-age=31536000;samesite=lax`;
+} catch (e) {
+    // Older browsers: skip.
+}
+
+/* ---------------------------------------------------------------
  * Confirm dialog
  * Add data-confirm="Question?" to any button that has wire:click.
  * Works everywhere (the browser's own confirm() popup is blocked in

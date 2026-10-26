@@ -21,5 +21,6 @@
         <flux:navbar.item :href="route('admin.reports')" :current="request()->routeIs('admin.reports')" :badge="$counts['reports'] ?: null" wire:navigate>{{ __('Reports') }}</flux:navbar.item>
         <flux:navbar.item :href="route('admin.messages')" :current="request()->routeIs('admin.messages')" wire:navigate>{{ __('Flagged messages') }}</flux:navbar.item>
         <flux:navbar.item :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('Members') }}</flux:navbar.item>
+        <flux:navbar.item :href="route('admin.security')" :current="request()->routeIs('admin.security')" wire:navigate>{{ __('Security / VPN') }}</flux:navbar.item>
     </flux:navbar>
 </div>

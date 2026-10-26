@@ -49,7 +49,7 @@ test('you need an approved profile with a photo before liking', function () {
 })->throws(DatingActionException::class, 'approved photo');
 
 test('daily like limit is enforced', function () {
-    config(['dating.limits.likes_per_day' => 2]);
+    config(['premium.free.likes_per_day' => 2]);
     $me = User::factory()->discoverable()->create();
     $others = User::factory()->discoverable()->count(3)->create();
 
@@ -57,7 +57,7 @@ test('daily like limit is enforced', function () {
     app(LikeUser::class)->handle($me, $others[1]);
 
     expect(fn () => app(LikeUser::class)->handle($me, $others[2]))
-        ->toThrow(DatingActionException::class, 'used all your likes');
+        ->toThrow(DatingActionException::class, 'used your free likes');
 });
 
 test('liking from discover shows a match toast when mutual', function () {

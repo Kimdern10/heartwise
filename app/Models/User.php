@@ -20,6 +20,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Billable;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -30,6 +31,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $email
  * @property Carbon|null $date_of_birth
  * @property Carbon|null $terms_accepted_at
+ * @property Carbon|null $onboarded_at
+ * @property string|null $flag_reason
  * @property bool $is_admin
  * @property AccountStatus $status
  * @property Carbon|null $suspended_until
@@ -46,12 +49,12 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  * @property-read Profile|null $profile
  */
-#[Fillable(['name', 'email', 'password', 'date_of_birth', 'terms_accepted_at'])]
+#[Fillable(['name', 'email', 'password', 'date_of_birth', 'terms_accepted_at', 'onboarded_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'email_code_hash'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use Billable, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -74,6 +77,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'password' => 'hashed',
             'date_of_birth' => 'date',
             'terms_accepted_at' => 'datetime',
+            'onboarded_at' => 'datetime',
             'is_admin' => 'boolean',
             'status' => AccountStatus::class,
             'suspended_until' => 'datetime',
@@ -139,12 +143,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
-     * One Spark (stand-out like) per day for everyone.
+     * Sparks (stand-out likes): 1 a day free, more with Premium.
      */
     public function hasSparkLeftToday(): bool
     {
-        return ! Like::query()->where('user_id', $this->id)->where('is_spark', true)
-            ->where('updated_at', '>=', now()->startOfDay())->exists();
+        return Like::query()->where('user_id', $this->id)->where('is_spark', true)
+            ->where('updated_at', '>=', now()->startOfDay())->count() < $this->sparksPerDay();
     }
 
     /** @return HasMany<Like, $this> */
@@ -213,6 +217,41 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         event(new Verified($this));
 
         return true;
+    }
+
+    public function isOnboarded(): bool
+    {
+        return $this->onboarded_at !== null;
+    }
+
+    /**
+     * Premium members have an active (or trialing / cancelled-but-paid-up) subscription.
+     */
+    public function isPremium(): bool
+    {
+        return $this->is_admin || $this->subscribed('premium');
+    }
+
+    public function likesPerDay(): int
+    {
+        return config($this->isPremium() ? 'premium.premium.likes_per_day' : 'premium.free.likes_per_day');
+    }
+
+    public function sparksPerDay(): int
+    {
+        return config($this->isPremium() ? 'premium.premium.sparks_per_day' : 'premium.free.sparks_per_day');
+    }
+
+    /** @return HasMany<SocialAccount, $this> */
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    /** @return HasMany<ConnectionCheck, $this> */
+    public function connectionChecks(): HasMany
+    {
+        return $this->hasMany(ConnectionCheck::class)->latest('id');
     }
 
     public function displayName(): string

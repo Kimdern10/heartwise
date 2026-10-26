@@ -32,6 +32,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'date_of_birth' => fake()->dateTimeBetween('-50 years', '-21 years')->format('Y-m-d'),
             'terms_accepted_at' => now(),
+            'onboarded_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
@@ -48,6 +49,14 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * A brand-new member who has not finished the sign-up questions yet.
+     */
+    public function notOnboarded(): static
+    {
+        return $this->state(fn (array $attributes) => ['onboarded_at' => null]);
     }
 
     public function admin(): static

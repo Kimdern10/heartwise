@@ -11,6 +11,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::livewire('reports', 'pages::admin.reports')->name('reports');
     Route::livewire('messages', 'pages::admin.messages')->name('messages');
     Route::livewire('users', 'pages::admin.users')->name('users');
+    Route::livewire('security', 'pages::admin.security')->name('security');
 
     Route::get('verifications/{verificationRequest}/selfie', SelfieController::class)->name('verifications.selfie');
 });

@@ -5,42 +5,20 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
+        <x-social-buttons />
+
         <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-6">
             @csrf
-            <!-- Name -->
-            <flux:input
-                name="name"
-                :label="__('Full name')"
-                :value="old('name')"
-                type="text"
-                required
-                autofocus
-                autocomplete="name"
-                :placeholder="__('Full name')"
-                :description:trailing="__('Kept private. You choose a display name for your profile next.')"
-            />
-
-            <!-- Email Address -->
+            <!-- Email Address (name, birthday and the rest come next, one question at a time) -->
             <flux:input
                 name="email"
                 :label="__('Email address')"
                 :value="old('email')"
                 type="email"
                 required
+                autofocus
                 autocomplete="email"
                 placeholder="email@example.com"
-            />
-
-            <!-- Date of birth (18+ only) -->
-            <flux:input
-                name="date_of_birth"
-                :label="__('Date of birth')"
-                :value="old('date_of_birth')"
-                type="date"
-                required
-                autocomplete="bday"
-                max="{{ now()->subYears(config('dating.minimum_age'))->toDateString() }}"
-                :description:trailing="__('You must be 18 or older. Your exact birthday is never shown, only your age.')"
             />
 
             <!-- Password -->

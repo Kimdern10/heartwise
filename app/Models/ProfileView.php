@@ -27,7 +27,7 @@ class ProfileView extends Model
 
     public static function record(User $viewer, User $viewed): void
     {
-        if ($viewer->is($viewed) || $viewer->is_admin || $viewer->profile?->browse_privately) {
+        if ($viewer->is($viewed) || $viewer->is_admin || ($viewer->profile?->browse_privately && $viewer->isPremium())) {
             return;
         }
 
