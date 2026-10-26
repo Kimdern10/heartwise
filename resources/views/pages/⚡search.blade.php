@@ -15,6 +15,8 @@ new #[Title('Search')] class extends Component {
     #[Url] public int $ageMin = 18;
     #[Url] public int $ageMax = 99;
     #[Url] public string $state = '';
+    /** '' = anywhere, 'state' = my state, or a number of miles from me. */
+    #[Url] public string $distance = '';
     #[Url] public string $goal = '';
     #[Url] public string $heightMin = '';
     #[Url] public string $heightMax = '';
@@ -44,8 +46,12 @@ new #[Title('Search')] class extends Component {
     #[Computed]
     public function results()
     {
+        $me = Auth::user()->profile;
+
         $filters = [
-            'age_min' => $this->ageMin, 'age_max' => $this->ageMax, 'state' => $this->state, 'goal' => $this->goal,
+            'age_min' => $this->ageMin, 'age_max' => $this->ageMax, 'goal' => $this->goal,
+            'state' => $this->distance === 'state' ? $me?->state : $this->state,
+            'within_miles' => ctype_digit($this->distance) ? (int) $this->distance : null,
             'online' => $this->online, 'verified' => $this->verified, 'has_prompts' => $this->hasPrompts,
             'hide_seen' => $this->hideSeen,
         ];
@@ -77,7 +83,7 @@ new #[Title('Search')] class extends Component {
     #[Computed]
     public function activeFilters(): int
     {
-        return collect([$this->state, $this->goal, $this->heightMin, $this->heightMax, $this->religion, $this->education,
+        return collect([$this->state, $this->distance, $this->goal, $this->heightMin, $this->heightMax, $this->religion, $this->education,
             $this->hasKids, $this->wantsKids, $this->drinking, $this->smoking])->filter()->count()
             + (int) ($this->ageMin > 18) + (int) ($this->ageMax < 99)
             + (int) $this->online + (int) $this->verified + (int) $this->hasPrompts;
@@ -128,12 +134,27 @@ new #[Title('Search')] class extends Component {
                     <flux:input type="number" size="sm" wire:model.live.debounce.500ms="ageMax" :label="__('to')" min="18" max="99" />
                 </div>
 
-                <flux:select size="sm" wire:model.live="state" :label="__('State')">
+                <flux:select size="sm" wire:model.live="distance" :label="__('Distance')" data-test="distance">
                     <flux:select.option value="">{{ __('Anywhere in the US') }}</flux:select.option>
-                    @foreach (config('dating.us_states') as $code => $name)
-                        <flux:select.option :value="$code">{{ $name }}</flux:select.option>
-                    @endforeach
+                    <flux:select.option value="state">{{ __('In my state') }}</flux:select.option>
+                    @if ($me?->isLocationVerified())
+                        @foreach ([10, 25, 50, 100, 250] as $miles)
+                            <flux:select.option :value="(string) $miles">{{ __('Within :n miles', ['n' => $miles]) }}</flux:select.option>
+                        @endforeach
+                    @endif
                 </flux:select>
+                @unless ($me?->isLocationVerified())
+                    <a href="{{ route('my-profile.edit') }}#location" class="-mt-2 block text-xs underline">{{ __('Verify your location to search by miles') }}</a>
+                @endunless
+
+                @if ($distance === '')
+                    <flux:select size="sm" wire:model.live="state" :label="__('Or pick a state')">
+                        <flux:select.option value="">{{ __('Any state') }}</flux:select.option>
+                        @foreach (config('dating.us_states') as $code => $name)
+                            <flux:select.option :value="$code">{{ $name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                @endif
 
                 <flux:select size="sm" wire:model.live="goal" :label="__('Looking for')">
                     <flux:select.option value="">{{ __('Any') }}</flux:select.option>

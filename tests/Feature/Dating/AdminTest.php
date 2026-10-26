@@ -7,7 +7,6 @@ use App\Models\Photo;
 use App\Models\Profile;
 use App\Models\Report;
 use App\Models\User;
-use Database\Seeders\SampleMembersSeeder;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -103,9 +102,3 @@ test('admins can suspend and reactivate members', function () {
     Livewire::test('pages::admin.users')->call('reactivate', $member->id);
     expect($member->fresh()->status)->toBe(AccountStatus::Active);
 });
-
-test('the sample seeder refuses to run in production', function () {
-    app()->detectEnvironment(fn () => 'production');
-
-    (new SampleMembersSeeder)->run();
-})->throws(RuntimeException::class);

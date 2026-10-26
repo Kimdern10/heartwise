@@ -68,6 +68,11 @@ class Discovery
                 ->when($filters['height_max'] ?? null, fn ($q, $in) => $q->where('height_cm', '<=', (int) ceil($in * 2.54))));
         }
 
+        // "Near me": within N miles of the viewer's verified location.
+        if (! empty($filters['within_miles']) && $profile?->latitude !== null) {
+            self::withinMiles($query, $profile->latitude, $profile->longitude, (int) $filters['within_miles']);
+        }
+
         if (! empty($filters['verified'])) {
             $query->whereHas('profile', fn (Builder $q) => $q->whereNotNull('photo_verified_at'));
         }
@@ -102,10 +107,14 @@ class Discovery
         }
 
         $ids = Cache::remember('daily-picks:'.$viewer->id.':'.now()->toDateString(), now()->endOfDay(), function () use ($viewer, $profile) {
-            return self::for($viewer)
-                ->with('profile.user')
-                ->limit(60)
-                ->get()
+            // Prefer people in the member's own state; fall back to the whole US.
+            $candidates = self::for($viewer, ['state' => $profile->state])->with('profile.user')->limit(60)->get();
+
+            if ($candidates->count() < 3) {
+                $candidates = self::for($viewer)->with('profile.user')->limit(60)->get();
+            }
+
+            return $candidates
                 ->sortByDesc(fn (User $u) => Compatibility::score($profile, $u->profile))
                 ->take(7)
                 ->pluck('id')
@@ -139,15 +148,24 @@ class Discovery
             $query->whereHas('profile', fn (Builder $q) => $q->whereNotNull('photo_verified_at'));
         }
 
-        // Distance needs both people to have verified their location; uses a
-        // simple bounding box (1° latitude ≈ 69 miles) so it works on any database.
         if ($profile->hasDealbreaker('distance') && $profile->pref_max_miles && $profile->latitude !== null) {
-            $latDelta = $profile->pref_max_miles / 69;
-            $lngDelta = $profile->pref_max_miles / max(1, 69 * cos(deg2rad($profile->latitude)));
-
-            $query->whereHas('profile', fn (Builder $q) => $q
-                ->whereBetween('latitude', [$profile->latitude - $latDelta, $profile->latitude + $latDelta])
-                ->whereBetween('longitude', [$profile->longitude - $lngDelta, $profile->longitude + $lngDelta]));
+            self::withinMiles($query, $profile->latitude, $profile->longitude, $profile->pref_max_miles);
         }
+    }
+
+    /**
+     * Distance needs both people to have verified their location; uses a
+     * simple bounding box (1° latitude ≈ 69 miles) so it works on any database.
+     *
+     * @param  Builder<User>  $query
+     */
+    private static function withinMiles(Builder $query, float $lat, float $lng, int $miles): void
+    {
+        $latDelta = $miles / 69;
+        $lngDelta = $miles / max(1, 69 * cos(deg2rad($lat)));
+
+        $query->whereHas('profile', fn (Builder $q) => $q
+            ->whereBetween('latitude', [$lat - $latDelta, $lat + $latDelta])
+            ->whereBetween('longitude', [$lng - $lngDelta, $lng + $lngDelta]));
     }
 }

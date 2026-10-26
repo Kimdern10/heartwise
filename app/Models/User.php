@@ -189,7 +189,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 
         // Local development has no real mail server, so keep the code where the
         // verify screen can show it. Never happens on the live site.
-        if (app()->isLocal()) {
+        if (app()->isLocal() && in_array(config('mail.default'), ['log', 'array'], true)) {
             cache()->put('dev-email-code:'.$this->id, $code, now()->addMinutes(15));
         }
 
@@ -235,6 +235,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function likesPerDay(): int
     {
         return config($this->isPremium() ? 'premium.premium.likes_per_day' : 'premium.free.likes_per_day');
+    }
+
+    public function likesLeftToday(): int
+    {
+        $used = Like::query()->where('user_id', $this->id)->where('liked', true)
+            ->where('updated_at', '>=', now()->startOfDay())->count();
+
+        return max(0, $this->likesPerDay() - $used);
     }
 
     public function sparksPerDay(): int

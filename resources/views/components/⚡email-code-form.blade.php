@@ -51,13 +51,13 @@ new class extends Component {
 
         <flux:error name="code" />
 
-        @if (app()->isLocal())
+        @if (app()->isLocal() && in_array(config('mail.default'), ['log', 'array'], true))
             <div class="w-full rounded-2xl border border-dashed border-amber-400 bg-amber-50 p-3 text-center text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200" data-test="dev-code">
-                <p class="font-semibold">{{ __('Local testing only') }}</p>
+                <p class="font-semibold">{{ __('Email not connected yet') }}</p>
                 @if ($devCode = cache('dev-email-code:'.auth()->id()))
-                    <p>{{ __('Emails are not sent on this computer. Your code is') }} <strong class="tracking-widest">{{ $devCode }}</strong></p>
+                    <p>{{ __('No email service is connected yet, so here is your code:') }} <strong class="tracking-widest">{{ $devCode }}</strong></p>
                 @else
-                    <p>{{ __('Emails are not sent on this computer. Click “Send a new code” and it will appear here.') }}</p>
+                    <p>{{ __('No email service is connected yet. Click “Send a new code” and it will appear here.') }}</p>
                 @endif
             </div>
         @endif

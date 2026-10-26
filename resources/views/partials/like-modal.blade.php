@@ -17,7 +17,12 @@
         <flux:textarea wire:model="likeComment" rows="2" maxlength="300" :placeholder="__('Add a comment (optional) — it makes a great first message')" />
         <flux:error name="likeComment" />
 
-        @if (auth()->user()->hasSparkLeftToday())
+        @if (! auth()->user()->isPremium())
+            <a href="{{ route('premium') }}" wire:navigate class="flex items-center gap-3 rounded-2xl border border-zinc-200 p-3 text-sm dark:border-zinc-700">
+                <flux:icon.bolt class="size-5 text-amber-500" />
+                <span class="flex-1">{{ trans_choice('{0} No free likes left today.|{1} :count free like left today.|[2,*] :count free likes left today.', auth()->user()->likesLeftToday()) }} <strong>{{ __('Premium: unlimited likes + 5 Sparks a day.') }}</strong></span>
+            </a>
+        @elseif (auth()->user()->hasSparkLeftToday())
             <label class="flex cursor-pointer items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950/40">
                 <input type="checkbox" wire:model="likeSpark" class="size-4 accent-amber-500" />
                 <flux:icon.bolt variant="solid" class="size-5 text-amber-500" />

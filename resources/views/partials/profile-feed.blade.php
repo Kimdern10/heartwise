@@ -46,7 +46,6 @@
                 @elseif ($profile->show_last_active && $person->last_active_at)
                     <span>{{ __('Active :time', ['time' => $person->last_active_at->diffForHumans()]) }}</span>
                 @endif
-                <x-sample-badge :user="$person" />
             </p>
         </div>
         @if ($score)

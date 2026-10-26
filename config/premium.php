@@ -38,9 +38,10 @@ return [
         ],
     ],
 
+    // Free members: 3 likes a day and no Sparks. Everything else in the features list is Premium.
     'free' => [
-        'likes_per_day' => 25,
-        'sparks_per_day' => 1,
+        'likes_per_day' => 3,
+        'sparks_per_day' => 0,
     ],
 
     'premium' => [
@@ -50,7 +51,7 @@ return [
 
     // Shown on the Premium page.
     'features' => [
-        ['heart', 'Unlimited likes', 'Like as many people as you want every day.'],
+        ['heart', 'Unlimited likes', 'Free members get 3 likes a day. Premium members like as many people as they want.'],
         ['eye', 'See everyone who likes you', 'Skip the guessing and match instantly.'],
         ['user-group', 'See who viewed your profile', 'Know who’s checking you out.'],
         ['bolt', '5 Sparks a day', 'Stand out at the top of their likes.'],

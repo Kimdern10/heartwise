@@ -11,12 +11,12 @@ use Livewire\Livewire;
 
 function seeker(): User
 {
-    return User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women])->create();
+    return User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women, 'state' => 'TX'])->create();
 }
 
 function woman(array $profile = [], array $user = []): User
 {
-    return User::factory()->discoverable(['gender' => Gender::Woman, 'seeking' => Seeking::Men, ...$profile])->create($user);
+    return User::factory()->discoverable(['gender' => Gender::Woman, 'seeking' => Seeking::Men, 'state' => 'TX', ...$profile])->create($user);
 }
 
 test('members without a profile are sent to create one', function () {
@@ -71,7 +71,7 @@ test('age and state filters work', function () {
 
     $this->actingAs($me);
 
-    Livewire::test('pages::discover')
+    Livewire::withQueryParams(['area' => 'anywhere'])->test('pages::discover')
         ->set('ageMin', 40)
         ->assertSee('Older')
         ->assertDontSee('Young')

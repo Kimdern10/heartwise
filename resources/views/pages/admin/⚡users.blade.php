@@ -71,7 +71,7 @@ new #[Title('Members')] class extends Component {
                     <flux:table.cell>
                         <div class="flex items-center gap-1">{{ $member->displayName() }} <x-verified-badge :user="$member" class="size-4" /></div>
                         <span class="text-xs text-zinc-500">{{ $member->email }}</span>
-                        @if ($member->is_sample) <flux:badge size="sm">{{ __('sample') }}</flux:badge> @endif
+
                         @if ($member->subscribed('premium')) <flux:badge size="sm" color="amber">{{ __('Premium') }}</flux:badge> @endif
                         @if ($member->flag_reason)
                             <flux:tooltip :content="$member->flag_reason"><flux:badge size="sm" color="red" icon="shield-exclamation">{{ __('Flagged') }}</flux:badge></flux:tooltip>
