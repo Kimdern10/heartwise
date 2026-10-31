@@ -187,12 +187,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'email_code_attempts' => 0,
         ])->save();
 
-        // Local development has no real mail server, so keep the code where the
-        // verify screen can show it. Never happens on the live site.
-        if (app()->isLocal() && in_array(config('mail.default'), ['log', 'array'], true)) {
-            cache()->put('dev-email-code:'.$this->id, $code, now()->addMinutes(15));
-        }
-
         return $code;
     }
 
