@@ -168,7 +168,7 @@ new class extends Component {
                             </div>
                         @endif
                         <div class="px-2 text-[11px] text-zinc-400 {{ $mine ? 'text-end' : '' }}">
-                            {{ $message->created_at->format('g:i A') }}
+                            {{ $message->created_at->isToday() ? $message->created_at->format('g:i A') : $message->created_at->format('D, M j · g:i A') }}
                             @if ($mine && $message->read_at) · <span class="text-brand-500">{{ __('Seen') }}</span> @endif
                         </div>
                     </div>
