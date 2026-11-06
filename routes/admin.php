@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\SelfieController;
 use Illuminate\Support\Facades\Route;
 
+// 'admin' lets in all staff (admins + moderators); 'admin.only' is for full admins.
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::livewire('/', 'pages::admin.dashboard')->name('dashboard');
     Route::livewire('profiles', 'pages::admin.profiles')->name('profiles');
@@ -11,7 +12,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::livewire('reports', 'pages::admin.reports')->name('reports');
     Route::livewire('messages', 'pages::admin.messages')->name('messages');
     Route::livewire('users', 'pages::admin.users')->name('users');
-    Route::livewire('security', 'pages::admin.security')->name('security');
+    Route::livewire('security', 'pages::admin.security')->middleware('admin.only')->name('security');
 
     Route::get('verifications/{verificationRequest}/selfie', SelfieController::class)->name('verifications.selfie');
 });

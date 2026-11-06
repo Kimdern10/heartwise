@@ -21,7 +21,7 @@ new #[Title('Moderation')] class extends Component {
             __('Selfies waiting') => [VerificationRequest::where('status', 'pending')->count(), route('admin.verifications')],
             __('Open reports') => [Report::where('status', 'open')->count(), route('admin.reports')],
             __('Flagged messages (7 days)') => [Message::whereNotNull('flag')->where('created_at', '>=', now()->subDays(7))->count(), route('admin.messages')],
-            __('Members') => [User::where('is_admin', false)->count(), route('admin.users')],
+            __('Members') => [User::where('role', 'member')->count(), route('admin.users')],
             __('Active in last 24h') => [User::where('last_active_at', '>=', now()->subDay())->count(), null],
             __('Matches') => [UserMatch::count(), null],
         ];
@@ -50,7 +50,7 @@ new #[Title('Moderation')] class extends Component {
     public function charts(): array
     {
         return [
-            __('New sign-ups') => $this->perDay(User::query()->where('is_admin', false)->where('is_sample', false)),
+            __('New sign-ups') => $this->perDay(User::query()->where('role', 'member')->where('is_sample', false)),
             __('New matches') => $this->perDay(UserMatch::query()),
             __('Premium subscriptions started') => $this->perDay(\Laravel\Cashier\Subscription::query()->where('type', 'premium')->where('stripe_id', 'not like', 'sub_test_local_%')),
             __('Reports received') => $this->perDay(Report::query()),
@@ -73,7 +73,7 @@ new #[Title('Moderation')] class extends Component {
             ->get();
 
         $monthly = $active->where('stripe_status', 'active')->sum(fn ($s) => ($plan = $plans[$s->stripe_price] ?? null) ? $plan['amount'] / $plan['months'] : 0);
-        $members = max(1, User::where('is_admin', false)->where('is_sample', false)->count());
+        $members = max(1, User::where('role', 'member')->where('is_sample', false)->count());
 
         return [
             __('Premium members') => number_format($active->count()),

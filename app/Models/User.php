@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AccountStatus;
 use App\Enums\ModerationStatus;
+use App\Enums\Role;
 use App\Notifications\EmailVerificationCode;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
@@ -42,6 +43,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $last_message_email_at
  * @property Carbon|null $last_boost_at
  * @property bool $is_admin
+ * @property Role $role
  * @property AccountStatus $status
  * @property Carbon|null $suspended_until
  * @property string|null $status_reason
@@ -68,6 +70,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     protected $attributes = [
         'status' => 'active',
         'is_admin' => false,
+        'role' => 'member',
         'is_sample' => false,
         'notify_matches' => true,
         'notify_messages' => true,
@@ -98,6 +101,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'last_message_email_at' => 'datetime',
             'last_boost_at' => 'datetime',
             'is_admin' => 'boolean',
+            'role' => Role::class,
             'status' => AccountStatus::class,
             'suspended_until' => 'datetime',
             'last_active_at' => 'datetime',
@@ -232,6 +236,32 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return true;
     }
 
+    /**
+     * Full admin: everything, including bans, security settings and staff roles.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin;
+    }
+
+    public function isModerator(): bool
+    {
+        return $this->role === Role::Moderator;
+    }
+
+    /**
+     * Staff (admins and moderators) use the admin panel, not the dating side.
+     */
+    public function isStaff(): bool
+    {
+        return $this->isAdmin() || $this->isModerator();
+    }
+
+    public function setRole(Role $role): void
+    {
+        $this->forceFill(['role' => $role, 'is_admin' => $role === Role::Admin])->save();
+    }
+
     public function isOnboarded(): bool
     {
         return $this->onboarded_at !== null;
@@ -242,7 +272,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function isPremium(): bool
     {
-        return $this->is_admin || $this->subscribed('premium');
+        return $this->isStaff() || $this->subscribed('premium');
     }
 
     public function isBoosted(): bool
@@ -255,7 +285,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function canBoost(): bool
     {
-        return $this->isPremium() && ! $this->is_admin
+        return $this->isPremium() && ! $this->isStaff()
             && (! $this->last_boost_at || $this->last_boost_at->lte(now()->subDays(7)));
     }
 

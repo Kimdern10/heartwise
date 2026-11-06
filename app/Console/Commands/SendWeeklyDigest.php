@@ -21,7 +21,7 @@ class SendWeeklyDigest extends Command
 
         User::query()
             ->where('notify_digest', true)
-            ->where('is_admin', false)
+            ->where('role', 'member')
             ->where('status', 'active')
             ->whereNotNull('onboarded_at')
             ->whereNotNull('email_verified_at')

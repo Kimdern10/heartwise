@@ -21,7 +21,7 @@ class PhotoController extends Controller
         /** @var User $viewer */
         $viewer = $request->user();
 
-        $allowed = $viewer->is_admin
+        $allowed = $viewer->isStaff()
             || $photo->user_id === $viewer->id
             || ($photo->status === ModerationStatus::Approved
                 && User::query()->discoverable()->whereKey($photo->user_id)->exists()

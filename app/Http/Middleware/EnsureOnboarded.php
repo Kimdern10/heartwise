@@ -16,7 +16,7 @@ class EnsureOnboarded
     {
         $user = $request->user();
 
-        if ($user && ! $user->is_admin && ! $user->isOnboarded()) {
+        if ($user && ! $user->isStaff() && ! $user->isOnboarded()) {
             return redirect()->route('onboarding');
         }
 

@@ -4,7 +4,7 @@
         @include('partials.head')
     </head>
     <body class="app-canvas min-h-screen text-zinc-900 antialiased dark:text-zinc-100">
-        @php($isAdmin = auth()->user()->is_admin)
+        @php($isAdmin = auth()->user()->isStaff())
         @php($home = $isAdmin ? route('admin.dashboard') : route('dashboard'))
 
         @if ($isAdmin)
@@ -24,7 +24,7 @@
                 ['admin.reports', 'flag', __('Reports'), $counts['reports']],
                 ['admin.messages', 'shield-exclamation', __('Flagged messages'), null],
                 ['admin.users', 'user-group', __('Members'), null],
-                ['admin.security', 'globe-americas', __('Security / VPN'), null],
+                ...(auth()->user()->isAdmin() ? [['admin.security', 'globe-americas', __('Security / VPN'), null]] : []),
             ])
         @else
             @php($unread = auth()->user()->unreadMessagesCount())
@@ -51,7 +51,7 @@
 
             @if ($isAdmin)
                 <div class="mx-2 mb-1 flex items-center gap-2 rounded-xl bg-zinc-900 px-3 py-2 text-xs font-bold uppercase tracking-wider text-white dark:bg-white dark:text-zinc-900">
-                    <flux:icon.shield-check class="size-4" /> {{ __('Admin panel') }}
+                    <flux:icon.shield-check class="size-4" /> {{ auth()->user()->isAdmin() ? __('Admin panel') : __('Moderator panel') }}
                 </div>
             @endif
 

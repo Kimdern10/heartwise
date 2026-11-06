@@ -62,11 +62,11 @@ class ConnectionInspector
                 ]);
             }
 
-            if ($user && $suspicious && ! $user->is_admin) {
+            if ($user && $suspicious && ! $user->isStaff()) {
                 $user->forceFill(['flag_reason' => $reason ?? $this->describe($info, $mismatch)])->saveQuietly();
             }
 
-            if ($user && ! $user->is_admin) {
+            if ($user && ! $user->isStaff()) {
                 $this->checkBanEvasion($user, $ip, $deviceId);
             }
 

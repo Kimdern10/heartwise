@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -21,7 +22,7 @@ class CreateAdmin extends Command
         $email = text('Admin email', required: true, validate: ['email' => 'email']);
 
         if ($user = User::where('email', $email)->first()) {
-            $user->forceFill(['is_admin' => true])->save();
+            $user->setRole(Role::Admin);
             $this->components->info("{$email} is now an admin.");
 
             return self::SUCCESS;
@@ -46,7 +47,8 @@ class CreateAdmin extends Command
             'terms_accepted_at' => now(),
         ]);
 
-        $user->forceFill(['is_admin' => true, 'email_verified_at' => now()])->save();
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $user->setRole(Role::Admin);
 
         $this->components->info("Admin {$email} created. Log in at ".route('login'));
 

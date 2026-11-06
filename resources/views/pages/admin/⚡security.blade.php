@@ -234,7 +234,7 @@ new #[Title('Connection security')] class extends Component {
                                 @if ($check->country && $check->country !== 'US')
                                     <flux:menu.item icon="globe-americas" wire:click="blockCountry('{{ $check->country }}')" data-confirm="{{ __('Block all connections from :c?', ['c' => $check->country]) }}">{{ __('Block country :c', ['c' => $check->country]) }}</flux:menu.item>
                                 @endif
-                                @if ($check->user && ! $check->user->is_admin && $check->user->isActive())
+                                @if ($check->user && ! $check->user->isStaff() && $check->user->isActive())
                                     <flux:menu.separator />
                                     <flux:menu.item icon="pause" wire:click="suspend({{ $check->user_id }}, 7)" data-confirm-danger data-confirm="{{ __('Suspend this member for 7 days?') }}">{{ __('Suspend member') }}</flux:menu.item>
                                     <flux:menu.item icon="no-symbol" variant="danger" wire:click="ban({{ $check->user_id }})" data-confirm-danger data-confirm="{{ __('Ban this member?') }}">{{ __('Ban member') }}</flux:menu.item>

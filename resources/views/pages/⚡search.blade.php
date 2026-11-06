@@ -14,9 +14,9 @@ new #[Title('Search')] class extends Component {
 
     #[Url] public int $ageMin = 18;
     #[Url] public int $ageMax = 99;
+    /** Search looks in ONE city: the member's own by default, or any city they choose. */
     #[Url] public string $state = '';
-    /** '' = anywhere, 'state' = my state, or a number of miles from me. */
-    #[Url] public string $distance = '';
+    #[Url] public string $city = '';
     #[Url] public string $goal = '';
     #[Url] public string $heightMin = '';
     #[Url] public string $heightMax = '';
@@ -32,26 +32,71 @@ new #[Title('Search')] class extends Component {
     #[Url] public bool $hideSeen = false;
     #[Url] public string $sort = 'active';
 
-    public function updated(): void
+    public function mount(): void
     {
+        $this->useMyCityIfEmpty();
+    }
+
+    public function updated(string $property): void
+    {
+        // A new state means the old city no longer applies.
+        if ($property === 'state') {
+            $this->city = '';
+        }
+
         $this->resetPage();
     }
 
     public function resetFilters(): void
     {
         $this->reset();
+        $this->useMyCityIfEmpty();
         $this->resetPage();
+    }
+
+    public function useMyCity(): void
+    {
+        $this->state = '';
+        $this->city = '';
+        $this->useMyCityIfEmpty();
+        $this->resetPage();
+    }
+
+    private function useMyCityIfEmpty(): void
+    {
+        $profile = Auth::user()->profile;
+
+        if ($this->state === '' || ! array_key_exists($this->state, config('dating.us_states'))) {
+            $this->state = (string) $profile?->state;
+        }
+
+        if (trim($this->city) === '' && $this->state === $profile?->state) {
+            $this->city = (string) $profile?->city;
+        }
+    }
+
+    /**
+     * Cities members live in for the chosen state, for the suggestions list.
+     *
+     * @return list<string>
+     */
+    #[Computed]
+    public function cities(): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember('cities:'.$this->state, now()->addHour(), fn () => \App\Models\Profile::query()
+            ->where('state', $this->state)->where('status', 'approved')
+            ->selectRaw('MIN(city) as city')->groupByRaw('LOWER(TRIM(city))')
+            ->orderBy('city')->limit(300)->pluck('city')->all());
     }
 
     #[Computed]
     public function results()
     {
-        $me = Auth::user()->profile;
-
         $filters = [
             'age_min' => $this->ageMin, 'age_max' => $this->ageMax, 'goal' => $this->goal,
-            'state' => $this->distance === 'state' ? $me?->state : $this->state,
-            'within_miles' => ctype_digit($this->distance) ? (int) $this->distance : null,
+            // Only the chosen city (falls back to the member's own if left empty).
+            'state' => $this->state ?: Auth::user()->profile?->state,
+            'city' => trim($this->city) ?: Auth::user()->profile?->city,
             'online' => $this->online, 'verified' => $this->verified, 'has_prompts' => $this->hasPrompts,
             'hide_seen' => $this->hideSeen,
         ];
@@ -83,7 +128,7 @@ new #[Title('Search')] class extends Component {
     #[Computed]
     public function activeFilters(): int
     {
-        return collect([$this->state, $this->distance, $this->goal, $this->heightMin, $this->heightMax, $this->religion, $this->education,
+        return collect([$this->goal, $this->heightMin, $this->heightMax, $this->religion, $this->education,
             $this->hasKids, $this->wantsKids, $this->drinking, $this->smoking])->filter()->count()
             + (int) ($this->ageMin > 18) + (int) ($this->ageMax < 99)
             + (int) $this->online + (int) $this->verified + (int) $this->hasPrompts;
@@ -97,7 +142,9 @@ new #[Title('Search')] class extends Component {
     <div class="mb-6 flex flex-wrap items-end justify-between gap-4 animate-fade-up">
         <div>
             <flux:heading size="xl" level="1" class="font-display !text-4xl">{{ __('Search') }}</flux:heading>
-            <flux:subheading size="lg">{{ trans_choice(':count member matches your search|:count members match your search', $this->results->total()) }}</flux:subheading>
+            <flux:subheading size="lg">
+                {{ trans_choice(':count member in :place matches your search|:count members in :place match your search', $this->results->total(), ['place' => (trim($city) ?: $me?->city).', '.($state ?: $me?->state)]) }}
+            </flux:subheading>
         </div>
         <div class="flex items-center gap-2">
             <flux:select wire:model.live="sort" class="w-44">
@@ -134,27 +181,26 @@ new #[Title('Search')] class extends Component {
                     <flux:input type="number" size="sm" wire:model.live.debounce.500ms="ageMax" :label="__('to')" min="18" max="99" />
                 </div>
 
-                <flux:select size="sm" wire:model.live="distance" :label="__('Distance')" data-test="distance">
-                    <flux:select.option value="">{{ __('Anywhere in the US') }}</flux:select.option>
-                    <flux:select.option value="state">{{ __('In my state') }}</flux:select.option>
-                    @if ($me?->isLocationVerified())
-                        @foreach ([10, 25, 50, 100, 250] as $miles)
-                            <flux:select.option :value="(string) $miles">{{ __('Within :n miles', ['n' => $miles]) }}</flux:select.option>
-                        @endforeach
-                    @endif
-                </flux:select>
-                @unless ($me?->isLocationVerified())
-                    <a href="{{ route('my-profile.edit') }}#location" class="-mt-2 block text-xs underline">{{ __('Verify your location to search by miles') }}</a>
-                @endunless
-
-                @if ($distance === '')
-                    <flux:select size="sm" wire:model.live="state" :label="__('Or pick a state')">
-                        <flux:select.option value="">{{ __('Any state') }}</flux:select.option>
+                {{-- Where: one city at a time --}}
+                <div class="space-y-3 rounded-2xl bg-zinc-50 p-3 dark:bg-zinc-800/60" data-test="search-city">
+                    <p class="flex items-center gap-1.5 text-sm font-semibold"><flux:icon.map-pin class="size-4" />{{ __('City') }}</p>
+                    <flux:select size="sm" wire:model.live="state" :label="__('State')">
                         @foreach (config('dating.us_states') as $code => $name)
                             <flux:select.option :value="$code">{{ $name }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                @endif
+                    <div>
+                        <flux:input size="sm" wire:model.live.debounce.600ms="city" list="search-cities" :label="__('City')" :placeholder="__('Type a city')" />
+                        <datalist id="search-cities">
+                            @foreach ($this->cities as $option)
+                                <option value="{{ $option }}"></option>
+                            @endforeach
+                        </datalist>
+                    </div>
+                    @if ($me && (mb_strtolower(trim($city)) !== mb_strtolower(trim($me->city)) || $state !== $me->state))
+                        <button type="button" wire:click="useMyCity" class="text-xs font-semibold underline">{{ __('Back to my city (:city)', ['city' => $me->city]) }}</button>
+                    @endif
+                </div>
 
                 <flux:select size="sm" wire:model.live="goal" :label="__('Looking for')">
                     <flux:select.option value="">{{ __('Any') }}</flux:select.option>

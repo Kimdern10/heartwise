@@ -24,7 +24,7 @@ class CheckConnection
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->is(self::EXEMPT) || $request->user()?->is_admin) {
+        if ($request->is(self::EXEMPT) || $request->user()?->isStaff()) {
             return $next($request);
         }
 

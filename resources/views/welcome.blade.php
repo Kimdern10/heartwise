@@ -37,6 +37,7 @@
                     <span class="flex items-center gap-1.5"><flux:icon.map-pin variant="solid" class="size-5 text-emerald-500" /> {{ __('Location verified') }}</span>
                     <span class="flex items-center gap-1.5"><flux:icon.shield-check variant="solid" class="size-5 text-brand-500" /> {{ __('18+ only') }}</span>
                 </div>
+                <p class="mt-4 text-xs text-zinc-400">{{ __('Photos on this page show models, not members.') }}</p>
             </div>
 
             {{-- Floating card stack --}}
@@ -45,7 +46,7 @@
                     <x-marketing-image name="portrait-2" alt="" class="size-full" />
                 </div>
                 <div class="absolute inset-x-0 top-0 h-[26rem] rotate-[3deg] overflow-hidden rounded-[2rem] shadow-2xl shadow-brand-500/30 animate-float [--r:3deg]">
-                    <x-marketing-image name="portrait-3" :alt="__('Smiling member')" class="absolute inset-0 size-full" />
+                    <x-marketing-image name="portrait-3" :alt="__('Smiling person (photo of a model)')" class="absolute inset-0 size-full" />
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent"></div>
                     <div class="absolute start-5 top-5 -rotate-12 rounded-xl border-[3px] border-emerald-300 px-3 py-0.5 text-2xl font-extrabold text-emerald-300">LIKE</div>
                     <div class="absolute inset-x-0 bottom-0 p-6 text-white">
@@ -66,8 +67,7 @@
                 <div class="glass absolute -end-4 top-16 flex items-center gap-2 rounded-2xl px-3 py-2 shadow-xl animate-float-slow [animation-delay:-4s]">
                     <flux:icon.shield-check variant="solid" class="size-5 text-emerald-500" />
                     <span class="text-xs font-semibold">{{ __('Profile reviewed') }}</span>
-                </div>
-            </div>
+                </div>            </div>
         </div>
     </section>
 

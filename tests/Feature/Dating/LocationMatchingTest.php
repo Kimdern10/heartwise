@@ -52,18 +52,25 @@ test('the daily pick is only shown in discover when it is in my city', function 
         ->assertDontSee('Most Compatible today');
 });
 
-test('search can filter by distance or my state', function () {
-    $me = personIn('TX', 'Me', [30.27, -97.74], 'man');
-    personIn('TX', 'Close', [30.30, -97.70]);
-    personIn('TX', 'FarTexan', [31.76, -106.49]);
-    personIn('FL', 'Floridian', [25.76, -80.19]);
+test('search shows only one city: mine by default, or the one I choose', function () {
+    $me = personIn('TX', 'Me', gender: 'man', city: 'Austin');
+    personIn('TX', 'Austinite', city: 'Austin');
+    personIn('TX', 'Houstonian', city: 'Houston');
+    personIn('FL', 'Floridian', city: 'Miami');
 
     $this->actingAs($me);
 
-    Livewire::test('pages::search')->set('distance', '25')
-        ->assertSee('Close')->assertDontSee('FarTexan')->assertDontSee('Floridian');
-    Livewire::test('pages::search')->set('distance', 'state')
-        ->assertSee('Close')->assertSee('FarTexan')->assertDontSee('Floridian');
+    Livewire::test('pages::search')
+        ->assertSet('state', 'TX')->assertSet('city', 'Austin')
+        ->assertSee('Austinite')->assertDontSee('Houstonian')->assertDontSee('Floridian')
+        ->set('city', 'houston')
+        ->assertSee('Houstonian')->assertDontSee('Austinite')
+        ->set('state', 'FL')
+        ->assertSet('city', '')
+        ->set('city', 'Miami')
+        ->assertSee('Floridian')->assertDontSee('Houstonian')
+        ->call('useMyCity')
+        ->assertSet('city', 'Austin')->assertSee('Austinite');
 });
 
 test('free members get 3 likes a day and no sparks', function () {

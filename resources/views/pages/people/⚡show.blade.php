@@ -23,7 +23,7 @@ new class extends Component {
         $viewer = Auth::user();
 
         $visible = $viewer->is($user)
-            || ($viewer->is_admin && $user->profile()->exists())
+            || ($viewer->isStaff() && $user->profile()->exists())
             || (User::query()->discoverable()->whereKey($user->id)->exists() && ! $viewer->hasBlockBetween($user));
 
         abort_unless($visible, 404);
@@ -39,7 +39,7 @@ new class extends Component {
         $person = User::with(['profile', 'approvedPhotos', 'prompts'])->findOrFail($this->personId);
 
         // Admins reviewing a profile see every photo, including ones still waiting for review.
-        if (Auth::user()->is_admin) {
+        if (Auth::user()->isStaff()) {
             $person->setRelation('approvedPhotos', $person->photos()->get());
         }
 
@@ -108,7 +108,7 @@ new class extends Component {
 }; ?>
 
 @php($person = $this->person)
-@php($isAdmin = Auth::user()->is_admin)
+@php($isAdmin = Auth::user()->isStaff())
 {{-- For admins the page is a read-only review: no likes, favorites or reports. --}}
 @php($isMe = Auth::user()->is($person) || $isAdmin)
 @php($canLike = ! $isMe && ! $this->match && ! $this->myLike?->liked)

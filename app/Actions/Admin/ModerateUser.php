@@ -48,8 +48,8 @@ class ModerateUser
 
     private function guard(User $moderator, User $user): void
     {
-        if ($moderator->is($user) || $user->is_admin) {
-            throw new DatingActionException('Admins cannot be suspended or banned here.');
+        if ($moderator->is($user) || $user->isStaff()) {
+            throw new DatingActionException('Staff accounts (admins and moderators) cannot be suspended or banned. Change their role first.');
         }
     }
 

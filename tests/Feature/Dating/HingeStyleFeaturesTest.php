@@ -205,10 +205,10 @@ test('preferences reject an impossible age range', function () {
 });
 
 test('advanced search filters by details and online status', function () {
-    $me = makePremium(User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women])->create());
-    User::factory()->discoverable(['display_name' => 'TallOnline', 'gender' => Gender::Woman, 'seeking' => Seeking::Men, 'height_cm' => 178, 'drinking' => 'no'])
+    $me = makePremium(User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women, 'state' => 'TX', 'city' => 'Austin'])->create());
+    User::factory()->discoverable(['display_name' => 'TallOnline', 'gender' => Gender::Woman, 'seeking' => Seeking::Men, 'height_cm' => 178, 'drinking' => 'no', 'state' => 'TX', 'city' => 'Austin'])
         ->create(['last_active_at' => now()]);
-    User::factory()->discoverable(['display_name' => 'ShortAway', 'gender' => Gender::Woman, 'seeking' => Seeking::Men, 'height_cm' => 155, 'drinking' => 'yes'])
+    User::factory()->discoverable(['display_name' => 'ShortAway', 'gender' => Gender::Woman, 'seeking' => Seeking::Men, 'height_cm' => 155, 'drinking' => 'yes', 'state' => 'TX', 'city' => 'Austin'])
         ->create(['last_active_at' => now()->subDays(3)]);
 
     $this->actingAs($me);

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckConnection;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsureFullAdmin;
 use App\Http\Middleware\EnsureOnboarded;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\EnsureUserIsAdmin;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'profile.complete' => EnsureProfileIsComplete::class,
             'onboarded' => EnsureOnboarded::class,
             'member' => RedirectAdminsToPanel::class,
+            'admin.only' => EnsureFullAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

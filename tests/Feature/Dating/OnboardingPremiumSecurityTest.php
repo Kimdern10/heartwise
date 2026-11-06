@@ -185,9 +185,9 @@ test('free members cannot see who viewed them', function () {
 });
 
 test('advanced search filters are ignored for free members', function () {
-    $me = User::factory()->discoverable(['gender' => 'man', 'seeking' => 'women'])->create();
-    User::factory()->discoverable(['display_name' => 'Drinker', 'gender' => 'woman', 'seeking' => 'men', 'drinking' => 'yes'])->create();
-    User::factory()->discoverable(['display_name' => 'NonDrinker', 'gender' => 'woman', 'seeking' => 'men', 'drinking' => 'no'])->create();
+    $me = User::factory()->discoverable(['gender' => 'man', 'seeking' => 'women', 'state' => 'TX', 'city' => 'Austin'])->create();
+    User::factory()->discoverable(['display_name' => 'Drinker', 'gender' => 'woman', 'seeking' => 'men', 'drinking' => 'yes', 'state' => 'TX', 'city' => 'Austin'])->create();
+    User::factory()->discoverable(['display_name' => 'NonDrinker', 'gender' => 'woman', 'seeking' => 'men', 'drinking' => 'no', 'state' => 'TX', 'city' => 'Austin'])->create();
 
     $this->actingAs($me);
 
