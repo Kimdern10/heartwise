@@ -52,7 +52,7 @@ test('the daily pick is only shown in discover when it is in my city', function 
         ->assertDontSee('Most Compatible today');
 });
 
-test('search shows only one city: mine by default, or the one I choose', function () {
+test('search stays in my state: my city by default, or another city in my state', function () {
     $me = personIn('TX', 'Me', gender: 'man', city: 'Austin');
     personIn('TX', 'Austinite', city: 'Austin');
     personIn('TX', 'Houstonian', city: 'Houston');
@@ -61,16 +61,23 @@ test('search shows only one city: mine by default, or the one I choose', functio
     $this->actingAs($me);
 
     Livewire::test('pages::search')
-        ->assertSet('state', 'TX')->assertSet('city', 'Austin')
+        ->assertSet('city', 'Austin')
         ->assertSee('Austinite')->assertDontSee('Houstonian')->assertDontSee('Floridian')
+        ->assertSee('Houston')->assertDontSee('Miami')           // only cities in my state are offered
         ->set('city', 'houston')
+        ->assertSet('city', 'Houston')
         ->assertSee('Houstonian')->assertDontSee('Austinite')
-        ->set('state', 'FL')
-        ->assertSet('city', '')
-        ->set('city', 'Miami')
-        ->assertSee('Floridian')->assertDontSee('Houstonian')
+        ->set('city', 'Miami')                                     // another state is not allowed
+        ->assertSet('city', 'Austin')->assertDontSee('Floridian')
+        ->set('city', 'rftgyu')                                    // nor a made-up city
+        ->assertSet('city', 'Austin')
+        ->set('city', 'Houston')
         ->call('useMyCity')
         ->assertSet('city', 'Austin')->assertSee('Austinite');
+
+    // A city from another state in the link is ignored too.
+    Livewire::withQueryParams(['city' => 'Miami'])->test('pages::search')
+        ->assertSet('city', 'Austin')->assertDontSee('Floridian');
 });
 
 test('free members get 3 likes a day and no sparks', function () {
