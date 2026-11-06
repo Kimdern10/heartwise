@@ -102,7 +102,18 @@ document.addEventListener(
 /* ---------------------------------------------------------------
  * Reveal-on-scroll: elements with data-reveal fade/slide in.
  * ------------------------------------------------------------- */
+document.documentElement.classList.add('reveal-ready');
+
 function initReveal() {
+    // Safety net: anything still hidden after 3 seconds is shown anyway.
+    clearTimeout(window.__revealFallback);
+    window.__revealFallback = setTimeout(() => {
+        document.querySelectorAll('[data-reveal]:not(.is-revealed)').forEach((el) => {
+            const r = el.getBoundingClientRect();
+            if (r.top < window.innerHeight) el.classList.add('is-revealed');
+        });
+    }, 3000);
+
     const items = document.querySelectorAll('[data-reveal]:not(.is-revealed)');
     if (!('IntersectionObserver' in window)) {
         items.forEach((el) => el.classList.add('is-revealed'));

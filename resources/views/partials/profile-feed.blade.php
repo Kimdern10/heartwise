@@ -58,7 +58,7 @@
 
     @foreach ($blocks as [$type, $item])
         @if ($type === 'photo' && $item)
-            <figure class="group relative overflow-hidden rounded-3xl bg-zinc-100 dark:bg-zinc-800" data-reveal>
+            <figure class="group relative overflow-hidden rounded-3xl bg-zinc-100 dark:bg-zinc-800">
                 <img src="{{ $item->url() }}" alt="{{ __('Photo of :name', ['name' => $person->displayName()]) }}" class="aspect-[4/5] w-full object-cover" loading="lazy" />
                 @if ($canLike)
                     <button type="button" wire:click="openLike({{ $person->id }}, 'photo', {{ $item->id }})" aria-label="{{ __('Like this photo') }}"

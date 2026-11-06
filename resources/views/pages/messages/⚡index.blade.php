@@ -5,23 +5,22 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Messages')] class extends Component {
+    use WithPagination;
+
     public string $search = '';
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
     #[Computed]
     public function conversations()
     {
-        $all = Conversations::for(Auth::user());
-
-        if ($this->search === '') {
-            return $all;
-        }
-
-        return $all->filter(fn ($match) => str_contains(
-            strtolower($match->otherUser(Auth::user())->displayName()),
-            strtolower($this->search),
-        ));
+        return Conversations::query(Auth::user(), $this->search)->paginate(20);
     }
 }; ?>
 
@@ -78,5 +77,7 @@ new #[Title('Messages')] class extends Component {
                 </a>
             @endforeach
         </div>
+
+        {{ $this->conversations->links() }}
     @endif
 </section>

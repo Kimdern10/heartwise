@@ -5,12 +5,24 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Matches')] class extends Component {
+    use WithPagination;
+
     #[Computed]
     public function matches()
     {
-        return Conversations::for(Auth::user());
+        return Conversations::query(Auth::user())->paginate(12);
+    }
+
+    /**
+     * New matches without any messages yet, for the row at the top (first page only).
+     */
+    #[Computed]
+    public function fresh()
+    {
+        return Conversations::query(Auth::user())->doesntHave('messages')->limit(20)->get();
     }
 }; ?>
 
@@ -30,7 +42,7 @@ new #[Title('Matches')] class extends Component {
             <flux:button class="mt-5" variant="primary" :href="route('discover')" wire:navigate>{{ __('Start discovering') }}</flux:button>
         </div>
     @else
-        @php($fresh = $this->matches->filter(fn ($m) => ! $m->latestMessage))
+        @php($fresh = $this->matches->onFirstPage() ? $this->fresh : collect())
         @if ($fresh->isNotEmpty())
             <div class="animate-fade-up">
                 <p class="mb-3 text-xs font-bold uppercase tracking-wider text-brand-600">{{ __('New matches') }}</p>
@@ -73,5 +85,7 @@ new #[Title('Matches')] class extends Component {
                 </article>
             @endforeach
         </div>
+
+        {{ $this->matches->links() }}
     @endif
 </section>

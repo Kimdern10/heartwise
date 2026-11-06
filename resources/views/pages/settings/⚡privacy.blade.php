@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Privacy settings')] class extends Component {
+    use WithPagination;
+
     public bool $isVisible = true;
 
     public bool $showLastActive = true;
@@ -32,7 +35,7 @@ new #[Title('Privacy settings')] class extends Component {
     #[Computed]
     public function blocked()
     {
-        return Auth::user()->blocks()->with('blocked.profile')->latest()->get();
+        return Auth::user()->blocks()->with('blocked.profile')->latest()->paginate(10, pageName: 'blockedPage');
     }
 
     public function updated(string $property): void
@@ -109,6 +112,7 @@ new #[Title('Privacy settings')] class extends Component {
                 @empty
                     <flux:text>{{ __('You have not blocked anyone.') }}</flux:text>
                 @endforelse
+                {{ $this->blocked->links() }}
             </div>
 
             <flux:separator variant="subtle" />

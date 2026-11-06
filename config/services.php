@@ -32,7 +32,8 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('APP_URL').'/auth/google/callback',
+        // Google only accepts https on a real domain, or http://localhost. Override for local testing.
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/auth/google/callback'),
     ],
 
     // Sign in with Apple: needs a paid Apple Developer account and a live HTTPS domain.
@@ -43,7 +44,7 @@ return [
         'key_id' => env('APPLE_KEY_ID'),
         'team_id' => env('APPLE_TEAM_ID'),
         'private_key' => env('APPLE_PRIVATE_KEY'),
-        'redirect' => env('APP_URL').'/auth/apple/callback',
+        'redirect' => env('APPLE_REDIRECT_URI', env('APP_URL').'/auth/apple/callback'),
     ],
 
     // IP intelligence used to spot VPNs, proxies and data centres (see App\Support\ConnectionInspector).

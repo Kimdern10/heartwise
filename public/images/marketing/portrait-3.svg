@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" role="img" aria-label="Illustration of a smiling woman with curly hair">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbcfe8"/>
+      <stop offset="1" stop-color="#e11d5a"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg3)"/>
+  <circle cx="330" cy="420" r="60" fill="#fff" opacity=".2"/>
+  <!-- curly hair cloud -->
+  <g fill="#2b1810">
+    <circle cx="150" cy="170" r="48"/><circle cx="205" cy="140" r="55"/><circle cx="262" cy="172" r="48"/>
+    <circle cx="130" cy="230" r="42"/><circle cx="280" cy="232" r="42"/><circle cx="140" cy="285" r="35"/><circle cx="270" cy="285" r="35"/>
+  </g>
+  <!-- neck + shoulders -->
+  <path d="M178 300h50v50h-50z" fill="#7a4a2e"/>
+  <path d="M70 500c0-95 60-160 133-160s133 65 133 160z" fill="#fef3c7"/>
+  <path d="M150 360q53 40 106 0" fill="none" stroke="#e11d5a" stroke-width="8" stroke-linecap="round"/>
+  <!-- face -->
+  <ellipse cx="203" cy="232" rx="62" ry="76" fill="#8b5a3c"/>
+  <!-- eyes (smiling) -->
+  <path d="M170 236q10-9 20 0M218 236q10-9 20 0" stroke="#1c0f08" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <circle cx="168" cy="262" r="10" fill="#f43f6e" opacity=".3"/>
+  <circle cx="240" cy="262" r="10" fill="#f43f6e" opacity=".3"/>
+  <!-- big smile -->
+  <path d="M180 270q24 28 48 0z" fill="#fff" stroke="#5b2a12" stroke-width="4" stroke-linejoin="round"/>
+</svg>

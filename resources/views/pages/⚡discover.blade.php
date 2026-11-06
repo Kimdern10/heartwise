@@ -28,14 +28,6 @@ new #[Title('Discover')] class extends Component {
     #[Url]
     public int $ageMax = 99;
 
-    /** near (within the member's distance) | state (their own state) | anywhere */
-    #[Url]
-    public string $area = '';
-
-    /** Only used with area = anywhere, to look at one particular state. */
-    #[Url]
-    public string $state = '';
-
     #[Url]
     public bool $verified = false;
 
@@ -48,40 +40,27 @@ new #[Title('Discover')] class extends Component {
             $this->ageMin = $profile->pref_age_min;
             $this->ageMax = $profile->pref_age_max ?? 99;
         }
-
-        // Show people nearby first: by distance when the member verified their location, else their state.
-        if (! in_array($this->area, ['near', 'state', 'anywhere'], true)) {
-            $this->area = $profile?->isLocationVerified() ? 'near' : 'state';
-        }
     }
 
-    public function radius(): int
-    {
-        return Auth::user()->profile?->pref_max_miles ?: 50;
-    }
-
+    /**
+     * Discover only shows people in the member's own city (Search covers wider areas).
+     */
     #[Computed]
     public function people()
     {
         $profile = Auth::user()->profile;
-        $near = $this->area === 'near' && $profile?->isLocationVerified();
 
         return Discovery::for(Auth::user(), [
             'age_min' => $this->ageMin,
             'age_max' => $this->ageMax,
-            'state' => match ($this->area) {
-                'anywhere' => $this->state ?: null,
-                // "Near me" without a verified location falls back to the member's state.
-                default => $near ? null : $profile?->state,
-            },
-            'within_miles' => $near ? $this->radius() : null,
+            'state' => $profile?->state,
+            'city' => $profile?->city,
             'verified' => $this->verified,
         ])->with('prompts')->limit(3)->get();
     }
 
     /**
-     * Today's Most Compatible pick goes first in the feed, if not seen yet
-     * and it fits the chosen area.
+     * Today's Most Compatible pick goes first in the feed, if it is in the member's city.
      */
     #[Computed]
     public function dailyPick(): ?User
@@ -89,13 +68,11 @@ new #[Title('Discover')] class extends Component {
         $pick = Discovery::dailyPicks(Auth::user())['pick'];
         $me = Auth::user()->profile;
 
-        if ($this->area === 'near' && $me?->isLocationVerified()) {
-            $miles = $pick ? $me->milesFrom($pick->profile) : null;
+        $sameCity = $pick && $me
+            && $pick->profile->state === $me->state
+            && mb_strtolower(trim($pick->profile->city)) === mb_strtolower(trim($me->city));
 
-            return $miles !== null && $miles <= $this->radius() ? $pick : null;
-        }
-
-        return $this->area === 'anywhere' || $pick?->profile->state === $me?->state ? $pick : null;
+        return $sameCity ? $pick : null;
     }
 
     /** The person brought back with Rewind, shown before anyone else. */
@@ -157,7 +134,7 @@ new #[Title('Discover')] class extends Component {
     #[Computed]
     public function activeFilters(): int
     {
-        return (int) ($this->ageMin > 18) + (int) ($this->ageMax < 99) + (int) filled($this->state) + (int) $this->verified;
+        return (int) ($this->ageMin > 18) + (int) ($this->ageMax < 99) + (int) $this->verified;
     }
 
     /**
@@ -209,17 +186,8 @@ new #[Title('Discover')] class extends Component {
 
     public function resetFilters(): void
     {
-        $this->reset('ageMin', 'ageMax', 'state', 'verified');
+        $this->reset('ageMin', 'ageMax', 'verified');
         $this->refreshPeople();
-    }
-
-    public function setArea(string $area): void
-    {
-        if (in_array($area, ['near', 'state', 'anywhere'], true)) {
-            $this->area = $area;
-            $this->state = '';
-            $this->refreshPeople();
-        }
     }
 
     private function refreshPeople(): void
@@ -260,22 +228,13 @@ new #[Title('Discover')] class extends Component {
         </div>
     </div>
 
-    {{-- Where to look --}}
+    {{-- Discover shows people in the member's own city --}}
     @php($me = Auth::user()->profile)
-    <div class="flex flex-wrap items-center gap-2 animate-fade-up">
-        @foreach ([
-            'near' => ['map-pin', __('Near me')],
-            'state' => ['map', __('In :state', ['state' => config('dating.us_states.'.$me?->state, __('my state'))])],
-            'anywhere' => ['globe-americas', __('Anywhere in the US')],
-        ] as $key => [$icon, $label])
-            <button type="button" wire:click="setArea('{{ $key }}')" data-test="area-{{ $key }}"
-                class="flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition {{ $area === $key ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900' : 'border-zinc-300 bg-white hover:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900' }}">
-                <flux:icon :name="$icon" class="size-4" /> {{ $label }}
-                @if ($key === 'near' && $area === 'near' && $me?->isLocationVerified())
-                    <span class="opacity-70">· {{ __(':n mi', ['n' => $this->radius()]) }}</span>
-                @endif
-            </button>
-        @endforeach
+    <div class="flex flex-wrap items-center gap-2 text-sm animate-fade-up" data-test="discover-city">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-4 py-2 font-semibold text-white dark:bg-white dark:text-zinc-900">
+            <flux:icon.map-pin class="size-4" /> {{ __('People in :city', ['city' => $me?->location()]) }}
+        </span>
+        <a href="{{ route('my-profile.edit') }}" wire:navigate class="text-zinc-500 underline-offset-2 hover:underline">{{ __('Moved? Update your city') }}</a>
     </div>
 
     @unless (Auth::user()->isPremium())
@@ -290,34 +249,10 @@ new #[Title('Discover')] class extends Component {
         </a>
     @endunless
 
-    @if ($area === 'near' && ! $me?->isLocationVerified())
-        <flux:callout icon="map-pin" color="sky">
-            <flux:callout.heading>{{ __('Turn on your location to see people near you') }}</flux:callout.heading>
-            <flux:callout.text>{{ __('Verify your location once and we’ll show members within your distance, closest areas first. Until then you’re seeing people in your state.') }}</flux:callout.text>
-            <x-slot name="actions">
-                <flux:button size="sm" :href="route('my-profile.edit').'#location'">{{ __('Verify my location') }}</flux:button>
-            </x-slot>
-        </flux:callout>
-    @endif
-
     <div x-show="filters" x-collapse x-cloak>
         <div class="hw-card grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
             <flux:input type="number" wire:model.live.debounce.500ms="ageMin" :label="__('Age from')" min="18" max="99" />
             <flux:input type="number" wire:model.live.debounce.500ms="ageMax" :label="__('Age to')" min="18" max="99" />
-            @if ($area === 'anywhere')
-                <flux:select wire:model.live="state" :label="__('State')">
-                    <flux:select.option value="">{{ __('Anywhere in the US') }}</flux:select.option>
-                    @foreach (config('dating.us_states') as $code => $name)
-                        <flux:select.option :value="$code">{{ $name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-            @else
-                <flux:select wire:model.live="area" :label="__('Area')">
-                    <flux:select.option value="near">{{ __('Near me') }}</flux:select.option>
-                    <flux:select.option value="state">{{ __('My state') }}</flux:select.option>
-                    <flux:select.option value="anywhere">{{ __('Anywhere in the US') }}</flux:select.option>
-                </flux:select>
-            @endif
             <div class="flex flex-col justify-end gap-2">
                 <flux:checkbox wire:model.live="verified" :label="__('Verified only')" />
                 <div class="flex gap-3 text-xs font-semibold">
@@ -333,22 +268,10 @@ new #[Title('Discover')] class extends Component {
             <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-zinc-900 text-white animate-float dark:bg-white dark:text-zinc-900">
                 <flux:icon.sparkles class="size-8" />
             </div>
-            @if ($area === 'near')
-                <flux:heading size="lg" class="font-display mt-5 !text-2xl">{{ __('No one new within :n miles', ['n' => $this->radius()]) }}</flux:heading>
-                <flux:text class="mt-1">{{ __('Look across your whole state, or check back later — new members join every day.') }}</flux:text>
-            @elseif ($area === 'state')
-                <flux:heading size="lg" class="font-display mt-5 !text-2xl">{{ __('You’ve seen everyone in :state', ['state' => config('dating.us_states.'.$me?->state)]) }}</flux:heading>
-                <flux:text class="mt-1">{{ __('Look across the whole US, or check back later — new members join every day.') }}</flux:text>
-            @else
-                <flux:heading size="lg" class="font-display mt-5 !text-2xl">{{ __('You’ve seen everyone for now') }}</flux:heading>
-                <flux:text class="mt-1">{{ __('Widen your filters or preferences, or check back later — new members join every day.') }}</flux:text>
-            @endif
+            <flux:heading size="lg" class="font-display mt-5 !text-2xl">{{ __('You’ve seen everyone in :city', ['city' => $me?->city]) }}</flux:heading>
+            <flux:text class="mt-1">{{ __('Check back soon — new people in :city join every day. You can also use Search to look further.', ['city' => $me?->city]) }}</flux:text>
             <div class="mt-5 flex flex-wrap justify-center gap-2">
-                @if ($area === 'near')
-                    <flux:button variant="primary" wire:click="setArea('state')">{{ __('Show my whole state') }}</flux:button>
-                @elseif ($area === 'state')
-                    <flux:button variant="primary" wire:click="setArea('anywhere')">{{ __('Show all of the US') }}</flux:button>
-                @endif
+                <flux:button variant="primary" icon="magnifying-glass" :href="route('search')" wire:navigate>{{ __('Search') }}</flux:button>
                 <flux:button wire:click="resetFilters">{{ __('Reset filters') }}</flux:button>
             </div>
         </div>

@@ -13,8 +13,11 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Activity')] class extends Component {
+    use WithPagination;
+
     #[Locked]
     public string $tab = 'likes';
 
@@ -40,7 +43,7 @@ new #[Title('Activity')] class extends Component {
             ->with(['user.profile', 'user.approvedPhotos', 'photo', 'prompt'])
             ->orderByDesc('is_spark')
             ->latest('updated_at')
-            ->get();
+            ->paginate(12, pageName: 'likesPage');
     }
 
     #[Computed]
@@ -54,8 +57,7 @@ new #[Title('Activity')] class extends Component {
             ->whereHas('viewer', fn (Builder $q) => $q->discoverable())
             ->with(['viewer.profile', 'viewer.approvedPhotos'])
             ->latest('viewed_at')
-            ->limit(60)
-            ->get();
+            ->paginate(20, pageName: 'viewsPage');
     }
 
     #[Computed]
@@ -68,7 +70,7 @@ new #[Title('Activity')] class extends Component {
             ->whereHas('favorite', fn (Builder $q) => $q->discoverable())
             ->with(['favorite.profile', 'favorite.approvedPhotos'])
             ->latest()
-            ->get();
+            ->paginate(20, pageName: 'favoritesPage');
     }
 
     public function likeBack(int $userId, LikeUser $likeUser): void
@@ -115,7 +117,7 @@ new #[Title('Activity')] class extends Component {
     </div>
 
     <nav class="flex gap-1 overflow-x-auto rounded-full bg-zinc-100 p-1 text-sm font-semibold dark:bg-zinc-800 sm:inline-flex">
-        @foreach (['likes' => [__('Likes you'), $this->likes->count()], 'views' => [__('Viewed you'), $this->views->count()], 'favorites' => [__('Favorites'), $this->favorites->count()]] as $key => [$label, $count])
+        @foreach (['likes' => [__('Likes you'), $this->likes->total()], 'views' => [__('Viewed you'), $this->views->total()], 'favorites' => [__('Favorites'), $this->favorites->total()]] as $key => [$label, $count])
             <a href="{{ route('activity', $key) }}" wire:navigate
                 class="flex shrink-0 items-center gap-2 rounded-full px-4 py-2 transition {{ $tab === $key ? 'bg-white text-zinc-900 shadow dark:bg-zinc-950 dark:text-white' : 'text-zinc-500' }}">
                 {{ $label }}
@@ -130,12 +132,12 @@ new #[Title('Activity')] class extends Component {
         @else
             @php($premium = Auth::user()->isPremium())
             @unless ($premium)
-                @include('partials.premium-upsell', ['text' => trans_choice('{1} :count person likes you.|[2,*] :count people like you.', $this->likes->count()).' '.__('Free members see one at a time (plus any Sparks). Get Premium to see everyone and match instantly.')])
+                @include('partials.premium-upsell', ['text' => trans_choice('{1} :count person likes you.|[2,*] :count people like you.', $this->likes->total()).' '.__('Free members see one at a time (plus any Sparks). Get Premium to see everyone and match instantly.')])
             @endunless
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($this->likes as $like)
                     @php($person = $like->user)
-                    @if (! $premium && ! $loop->first && ! $like->is_spark)
+                    @if (! $premium && ! ($loop->first && $this->likes->onFirstPage()) && ! $like->is_spark)
                         <a href="{{ route('premium') }}" wire:navigate wire:key="like-locked-{{ $like->id }}" class="hw-card group relative block overflow-hidden" data-reveal>
                             <div class="aspect-[4/5] w-full bg-gradient-to-br from-rose-200 via-zinc-300 to-violet-300 dark:from-rose-900 dark:via-zinc-700 dark:to-violet-900"></div>
                             <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/20 text-white">
@@ -178,6 +180,7 @@ new #[Title('Activity')] class extends Component {
                     </article>
                 @endforeach
             </div>
+            <div class="mt-6">{{ $this->likes->links() }}</div>
         @endif
     @elseif ($tab === 'views')
         @if ($this->views->isEmpty())
@@ -185,7 +188,7 @@ new #[Title('Activity')] class extends Component {
         @else
             @php($premium = Auth::user()->isPremium())
             @unless ($premium)
-                @include('partials.premium-upsell', ['text' => trans_choice('{1} :count person viewed your profile.|[2,*] :count people viewed your profile.', $this->views->count()).' '.__('Get Premium to see who.')])
+                @include('partials.premium-upsell', ['text' => trans_choice('{1} :count person viewed your profile.|[2,*] :count people viewed your profile.', $this->views->total()).' '.__('Get Premium to see who.')])
             @endunless
             <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 @foreach ($this->views as $view)
@@ -208,6 +211,7 @@ new #[Title('Activity')] class extends Component {
                     </a>
                 @endforeach
             </div>
+            <div class="mt-6">{{ $this->views->links() }}</div>
         @endif
         <flux:text class="text-xs">{{ __('Want to look around without showing up here? Turn on “Browse privately” in Settings → Privacy.') }}</flux:text>
     @else
@@ -227,6 +231,7 @@ new #[Title('Activity')] class extends Component {
                     </div>
                 @endforeach
             </div>
+            <div class="mt-6">{{ $this->favorites->links() }}</div>
         @endif
     @endif
 </section>

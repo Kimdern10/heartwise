@@ -162,6 +162,11 @@ test('premium members can boost once a week and appear first', function () {
 
     expect(Discovery::for($me)->first()->id)->toBe($her->id);
 
+    // After boosting, pages show "Next Boost …" (this used to crash).
+    $this->get(route('dashboard'))->assertOk()->assertSee('Boosted');
+    $her->profile->forceFill(['boosted_until' => now()->subMinute()])->save();
+    $this->get(route('dashboard'))->assertOk()->assertSee('Next Boost');
+
     $this->actingAs($free = User::factory()->discoverable()->create());
     Livewire::test('boost-button')->call('boost');
     expect($free->fresh()->isBoosted())->toBeFalse();

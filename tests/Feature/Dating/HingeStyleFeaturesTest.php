@@ -245,15 +245,15 @@ test('the new pages render', function (string $route, array $params = []) {
 ]);
 
 test('discover feed passes and moves on', function () {
-    $me = User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women, 'state' => 'TX'])->create();
-    $her = memberWithPrompt(['gender' => Gender::Woman, 'seeking' => Seeking::Men, 'display_name' => 'Feedy', 'state' => 'TX']);
+    $me = User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women, 'state' => 'TX', 'city' => 'Austin'])->create();
+    $her = memberWithPrompt(['gender' => Gender::Woman, 'seeking' => Seeking::Men, 'display_name' => 'Feedy', 'state' => 'TX', 'city' => 'Austin']);
     $this->actingAs($me);
 
     Livewire::test('pages::discover')
         ->assertSee('Feedy')
         ->assertSee('Sunday pancakes')
         ->call('passOn', $her->id)
-        ->assertSee('You’ve seen everyone in Texas');
+        ->assertSee('You’ve seen everyone in Austin');
 });
 
 test('the photo the like points at is not deleted with the like', function () {

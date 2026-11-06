@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AccountStatus;
 use App\Enums\ModerationStatus;
 use App\Notifications\EmailVerificationCode;
+use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -258,7 +259,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             && (! $this->last_boost_at || $this->last_boost_at->lte(now()->subDays(7)));
     }
 
-    public function nextBoostAt(): ?Carbon
+    public function nextBoostAt(): ?CarbonInterface
     {
         return $this->last_boost_at?->addDays(7);
     }

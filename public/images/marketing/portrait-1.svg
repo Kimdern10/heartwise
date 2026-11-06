@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" role="img" aria-label="Illustration of a smiling woman">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#fb7185"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg1)"/>
+  <circle cx="320" cy="90" r="46" fill="#fff" opacity=".35"/>
+  <!-- hair back -->
+  <path d="M110 230c0-95 55-150 95-150s100 40 100 140c0 70-10 150-20 190H125c-10-50-15-120-15-180z" fill="#3b2314"/>
+  <!-- neck + shoulders -->
+  <path d="M175 300h55v50h-55z" fill="#c98a63"/>
+  <path d="M70 500c0-95 60-160 135-160s130 65 130 160z" fill="#1b1718"/>
+  <path d="M160 345c15 25 70 25 85 0l10 20c-25 30-80 30-105 0z" fill="#e11d5a"/>
+  <!-- face -->
+  <ellipse cx="203" cy="225" rx="68" ry="82" fill="#d99a72"/>
+  <!-- hair front -->
+  <path d="M135 210c10-70 60-95 100-80 30 10 45 40 38 85-20-35-60-50-90-45-25 5-38 20-48 40z" fill="#3b2314"/>
+  <!-- eyes -->
+  <path d="M168 232q10-9 20 0" stroke="#2a1a10" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M220 232q10-9 20 0" stroke="#2a1a10" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- cheeks + smile -->
+  <circle cx="165" cy="258" r="11" fill="#f43f6e" opacity=".25"/>
+  <circle cx="243" cy="258" r="11" fill="#f43f6e" opacity=".25"/>
+  <path d="M182 268q22 22 44 0" stroke="#7c2d12" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- earring -->
+  <circle cx="137" cy="252" r="5" fill="#fde68a"/>
+</svg>

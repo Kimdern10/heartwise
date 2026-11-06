@@ -69,6 +69,11 @@ class Discovery
                 ->when($filters['height_max'] ?? null, fn ($q, $in) => $q->where('height_cm', '<=', (int) ceil($in * 2.54))));
         }
 
+        // Same city (and state), ignoring upper/lower case and extra spaces.
+        if (! empty($filters['city'])) {
+            $query->whereHas('profile', fn (Builder $q) => $q->whereRaw('LOWER(TRIM(city)) = ?', [mb_strtolower(trim($filters['city']))]));
+        }
+
         // "Near me": within N miles of the viewer's verified location.
         if (! empty($filters['within_miles']) && $profile?->latitude !== null) {
             self::withinMiles($query, $profile->latitude, $profile->longitude, (int) $filters['within_miles']);

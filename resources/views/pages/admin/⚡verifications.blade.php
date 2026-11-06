@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Selfie verification')] class extends Component {
+    use WithPagination;
+
     #[Computed]
     public function requests()
     {
@@ -16,8 +19,7 @@ new #[Title('Selfie verification')] class extends Component {
             ->where('status', ModerationStatus::Pending)
             ->with(['user.profile', 'user.photos'])
             ->oldest()
-            ->limit(20)
-            ->get();
+            ->paginate(10);
     }
 
     public function approve(int $id): void
@@ -66,5 +68,7 @@ new #[Title('Selfie verification')] class extends Component {
         @empty
             <flux:card class="py-10 text-center"><flux:text>{{ __('No selfies waiting. 🎉') }}</flux:text></flux:card>
         @endforelse
+
+        {{ $this->requests->links() }}
     </div>
 </section>

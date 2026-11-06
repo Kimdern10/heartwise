@@ -11,12 +11,12 @@ use Livewire\Livewire;
 
 function seeker(): User
 {
-    return User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women, 'state' => 'TX'])->create();
+    return User::factory()->discoverable(['gender' => Gender::Man, 'seeking' => Seeking::Women, 'state' => 'TX', 'city' => 'Austin'])->create();
 }
 
 function woman(array $profile = [], array $user = []): User
 {
-    return User::factory()->discoverable(['gender' => Gender::Woman, 'seeking' => Seeking::Men, 'state' => 'TX', ...$profile])->create($user);
+    return User::factory()->discoverable(['gender' => Gender::Woman, 'seeking' => Seeking::Men, 'state' => 'TX', 'city' => 'Austin', ...$profile])->create($user);
 }
 
 test('members without a profile are sent to create one', function () {
@@ -64,19 +64,19 @@ test('pending profiles and members without approved photos are not shown', funct
         ->assertDontSee('NoPhotoPerson');
 });
 
-test('age and state filters work', function () {
+test('the age filter works', function () {
     $me = seeker();
-    woman(['display_name' => 'Young', 'state' => 'TX'], ['date_of_birth' => now()->subYears(22)->toDateString()]);
-    woman(['display_name' => 'Older', 'state' => 'CA'], ['date_of_birth' => now()->subYears(45)->toDateString()]);
+    woman(['display_name' => 'Young'], ['date_of_birth' => now()->subYears(22)->toDateString()]);
+    woman(['display_name' => 'Older'], ['date_of_birth' => now()->subYears(45)->toDateString()]);
 
     $this->actingAs($me);
 
-    Livewire::withQueryParams(['area' => 'anywhere'])->test('pages::discover')
+    Livewire::test('pages::discover')
         ->set('ageMin', 40)
         ->assertSee('Older')
         ->assertDontSee('Young')
         ->set('ageMin', 18)
-        ->set('state', 'TX')
+        ->set('ageMax', 30)
         ->assertSee('Young')
         ->assertDontSee('Older');
 });

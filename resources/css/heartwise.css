@@ -119,13 +119,14 @@
 }
 
 /* Reveal on scroll (see resources/js/app.js) */
-[data-reveal] {
+/* Only hide content once app.js has loaded (it adds .reveal-ready), so nothing can get stuck invisible. */
+.reveal-ready [data-reveal]:not(.is-revealed) {
     opacity: 0;
     transform: translateY(22px);
     transition: opacity .7s cubic-bezier(.2, .8, .2, 1), transform .7s cubic-bezier(.2, .8, .2, 1);
     transition-delay: calc(var(--i, 0) * 80ms);
 }
-[data-reveal].is-revealed { opacity: 1; transform: none; }
+.reveal-ready [data-reveal] { transition: opacity .7s cubic-bezier(.2, .8, .2, 1), transform .7s cubic-bezier(.2, .8, .2, 1); }
 
 .stagger > * { animation: var(--animate-fade-up); }
 .stagger > *:nth-child(2) { animation-delay: 60ms; }

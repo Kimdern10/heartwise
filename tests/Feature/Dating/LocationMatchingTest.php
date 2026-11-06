@@ -7,13 +7,14 @@ use App\Exceptions\DatingActionException;
 use App\Models\User;
 use Livewire\Livewire;
 
-function personIn(string $state, string $name, ?array $coords = null, string $gender = 'woman'): User
+function personIn(string $state, string $name, ?array $coords = null, string $gender = 'woman', string $city = 'Austin'): User
 {
     $user = User::factory()->discoverable([
         'display_name' => $name,
         'gender' => $gender === 'woman' ? Gender::Woman : Gender::Man,
         'seeking' => $gender === 'woman' ? Seeking::Men : Seeking::Women,
         'state' => $state,
+        'city' => $city,
     ])->create();
 
     if ($coords) {
@@ -23,49 +24,32 @@ function personIn(string $state, string $name, ?array $coords = null, string $ge
     return $user;
 }
 
-test('discover shows people in my state by default', function () {
-    $me = personIn('TX', 'Me', gender: 'man');
-    personIn('TX', 'Texan');
-    personIn('CA', 'Californian');
+test('discover only shows people in my own city', function () {
+    $me = personIn('TX', 'Me', gender: 'man', city: 'Austin');
+    $local = personIn('TX', 'Austinite', city: ' austin ');   // different spacing/case still matches
+    personIn('TX', 'Houstonian', city: 'Houston');            // same state, other city
+    personIn('GA', 'OtherAustin', city: 'Austin');            // same city name, other state
 
     $this->actingAs($me);
 
     Livewire::test('pages::discover')
-        ->assertSet('area', 'state')
-        ->assertSee('Texan')
-        ->assertDontSee('Californian')
-        ->call('setArea', 'anywhere')
-        ->call('passOn', User::where('email', '!=', $me->email)->whereHas('profile', fn ($q) => $q->where('display_name', 'Texan'))->first()->id)
-        ->assertSee('Californian');
+        ->assertSee('People in Austin, TX')
+        ->assertSee('Austinite')
+        ->assertDontSee('Houstonian')
+        ->assertDontSee('OtherAustin')
+        ->call('passOn', $local->id)
+        ->assertSee('You’ve seen everyone in Austin');
 });
 
-test('verified members see people near them first', function () {
-    $me = personIn('TX', 'Me', [30.27, -97.74], 'man'); // Austin
-    personIn('TX', 'RoundRock', [30.51, -97.68]);        // ~17 miles
-    personIn('TX', 'ElPaso', [31.76, -106.49]);          // ~530 miles, same state
+test('the daily pick is only shown in discover when it is in my city', function () {
+    $me = personIn('TX', 'Me', gender: 'man', city: 'Austin');
+    personIn('TX', 'Houstonian', city: 'Houston');
 
     $this->actingAs($me);
 
     Livewire::test('pages::discover')
-        ->assertSet('area', 'near')
-        ->assertSee('RoundRock')
-        ->assertDontSee('ElPaso')
-        ->call('setArea', 'state')
-        ->call('passOn', User::whereHas('profile', fn ($q) => $q->where('display_name', 'RoundRock'))->first()->id)
-        ->assertSee('ElPaso');
-});
-
-test('near me without a verified location falls back to my state', function () {
-    $me = personIn('TX', 'Me', gender: 'man');
-    personIn('TX', 'Texan');
-    personIn('NY', 'NewYorker');
-
-    $this->actingAs($me);
-
-    Livewire::withQueryParams(['area' => 'near'])->test('pages::discover')
-        ->assertSee('Turn on your location')
-        ->assertSee('Texan')
-        ->assertDontSee('NewYorker');
+        ->assertDontSee('Houstonian')
+        ->assertDontSee('Most Compatible today');
 });
 
 test('search can filter by distance or my state', function () {

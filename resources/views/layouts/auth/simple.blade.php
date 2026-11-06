@@ -18,12 +18,12 @@
                 <div class="relative my-auto max-w-md">
                     <div class="relative mb-10 h-56">
                         <div class="glass absolute start-0 top-6 w-44 rotate-[-8deg] rounded-3xl p-3 !text-zinc-900 shadow-2xl animate-float [--r:-8deg]">
-                            <div class="h-32 rounded-2xl bg-gradient-to-br from-amber-200 to-rose-300"></div>
+                            <x-marketing-image name="portrait-1" :alt="__('Smiling member')" class="h-32 w-full rounded-2xl" />
                             <p class="mt-2 text-sm font-bold">Real profiles</p>
                             <p class="text-xs text-zinc-600">Reviewed by people</p>
                         </div>
                         <div class="glass absolute start-40 top-0 w-44 rotate-[6deg] rounded-3xl p-3 !text-zinc-900 shadow-2xl animate-float-slow [--r:6deg]">
-                            <div class="h-32 rounded-2xl bg-gradient-to-br from-sky-200 to-violet-300"></div>
+                            <x-marketing-image name="portrait-2" :alt="__('Smiling member')" class="h-32 w-full rounded-2xl" />
                             <p class="mt-2 flex items-center gap-1 text-sm font-bold">Verified <flux:icon.check-badge variant="solid" class="size-4 text-sky-500" /></p>
                             <p class="text-xs text-zinc-600">Selfie + location</p>
                         </div>

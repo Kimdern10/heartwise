@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" role="img" aria-label="Illustration of a smiling man">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#bae6fd"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg2)"/>
+  <circle cx="80" cy="100" r="40" fill="#fff" opacity=".3"/>
+  <!-- neck + shoulders -->
+  <path d="M175 295h55v55h-55z" fill="#8d5a3b"/>
+  <path d="M65 500c0-100 62-165 138-165s137 65 137 165z" fill="#0f766e"/>
+  <path d="M170 340l33 40 33-40" fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>
+  <!-- face -->
+  <ellipse cx="203" cy="222" rx="66" ry="80" fill="#a8704b"/>
+  <!-- hair -->
+  <path d="M137 205c-5-60 30-95 70-95 45 0 75 30 66 90-12-25-40-38-70-38-30 0-52 15-66 43z" fill="#1c1917"/>
+  <!-- beard -->
+  <path d="M142 240c5 55 35 80 61 80s56-25 61-80c-12 22-35 32-61 32s-49-10-61-32z" fill="#1c1917" opacity=".85"/>
+  <!-- eyes -->
+  <circle cx="178" cy="228" r="6" fill="#1c1917"/>
+  <circle cx="229" cy="228" r="6" fill="#1c1917"/>
+  <path d="M166 210q12-7 24 0M216 210q12-7 24 0" stroke="#1c1917" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- smile -->
+  <path d="M185 268q18 16 36 0" stroke="#fef3c7" stroke-width="5" fill="none" stroke-linecap="round"/>
+</svg>

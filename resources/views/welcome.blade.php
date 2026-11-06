@@ -41,9 +41,11 @@
 
             {{-- Floating card stack --}}
             <div class="relative mx-auto h-[30rem] w-full max-w-sm animate-pop [animation-delay:200ms]">
-                <div class="absolute inset-x-6 top-10 h-[24rem] rotate-[-7deg] rounded-[2rem] bg-gradient-to-br from-sky-300 to-violet-400 shadow-2xl animate-float-slow [--r:-7deg]"></div>
+                <div class="absolute inset-x-6 top-10 h-[24rem] rotate-[-7deg] overflow-hidden rounded-[2rem] shadow-2xl animate-float-slow [--r:-7deg]">
+                    <x-marketing-image name="portrait-2" alt="" class="size-full" />
+                </div>
                 <div class="absolute inset-x-0 top-0 h-[26rem] rotate-[3deg] overflow-hidden rounded-[2rem] shadow-2xl shadow-brand-500/30 animate-float [--r:3deg]">
-                    <div class="absolute inset-0 bg-gradient-to-br from-amber-200 via-rose-300 to-brand-500"></div>
+                    <x-marketing-image name="portrait-3" :alt="__('Smiling member')" class="absolute inset-0 size-full" />
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent"></div>
                     <div class="absolute start-5 top-5 -rotate-12 rounded-xl border-[3px] border-emerald-300 px-3 py-0.5 text-2xl font-extrabold text-emerald-300">LIKE</div>
                     <div class="absolute inset-x-0 bottom-0 p-6 text-white">

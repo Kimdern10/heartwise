@@ -40,7 +40,7 @@
             @php($badges = ['messages.index' => $unread, 'activity' => $pendingLikes])
         @endif
 
-        <flux:sidebar sticky collapsible="mobile" class="glass border-e-0 lg:m-3 lg:h-[calc(100svh-1.5rem)] lg:rounded-3xl lg:shadow-xl lg:shadow-brand-500/5">
+        <flux:sidebar sticky collapsible="mobile" class="glass border-e-0 overflow-y-auto overscroll-contain lg:m-3 lg:h-[calc(100svh-1.5rem)] lg:max-h-[calc(100svh-1.5rem)] lg:rounded-3xl lg:shadow-xl lg:shadow-brand-500/5">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ $home }}" wire:navigate />
                 @unless ($isAdmin)

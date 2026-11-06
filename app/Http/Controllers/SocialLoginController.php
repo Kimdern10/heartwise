@@ -43,8 +43,18 @@ class SocialLoginController extends Controller
 
         try {
             $social = Socialite::driver($provider)->user();
-        } catch (Throwable) {
-            return redirect()->route('login')->with('status', __('Sign-in was cancelled or failed. Please try again.'));
+        } catch (Throwable $e) {
+            report($e);
+
+            // On your own computer, show the real reason to make setup problems easy to fix.
+            $detail = app()->isLocal() ? ' ('.class_basename($e).': '.mb_strimwidth($e->getMessage(), 0, 160, '…').')' : '';
+
+            return redirect()->route('login')->with('status', __('Sign-in with :provider didn’t work. Please try again.', ['provider' => ucfirst($provider)]).$detail);
+        }
+
+        if (request()->filled('error')) {
+            // The person pressed "Cancel" on the Google/Apple screen.
+            return redirect()->route('login')->with('status', __('Sign-in was cancelled.'));
         }
 
         $account = SocialAccount::query()->where('provider', $provider)->where('provider_id', $social->getId())->first();
