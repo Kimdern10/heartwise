@@ -43,6 +43,9 @@
         <flux:sidebar sticky collapsible="mobile" class="glass border-e-0 lg:m-3 lg:h-[calc(100svh-1.5rem)] lg:rounded-3xl lg:shadow-xl lg:shadow-brand-500/5">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ $home }}" wire:navigate />
+                @unless ($isAdmin)
+                    <div class="ms-auto hidden lg:block"><livewire:notification-bell key="bell-desktop" /></div>
+                @endunless
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
@@ -83,6 +86,12 @@
 
             <flux:spacer />
 
+            {{-- Shown by resources/js/app.js when the browser offers "Add to home screen". --}}
+            <button type="button" data-install-app hidden
+                class="mx-2 mb-2 flex items-center justify-center gap-2 rounded-xl border border-zinc-300 px-3 py-2 text-sm font-semibold transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                <flux:icon.device-phone-mobile class="size-4" /> {{ __('Install the app') }}
+            </button>
+
             <div class="bg-brand-gradient relative overflow-hidden rounded-2xl p-4 text-white {{ $isAdmin ? 'hidden' : 'hidden lg:block' }}">
                 <div class="absolute -end-6 -top-6 size-24 rounded-full bg-white/15 blur-xl"></div>
                 <flux:icon.shield-check class="size-6" />
@@ -103,6 +112,10 @@
             </a>
 
             <flux:spacer />
+
+            @unless ($isAdmin)
+                <livewire:notification-bell key="bell-mobile" />
+            @endunless
 
             <flux:dropdown position="top" align="end">
                 <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />

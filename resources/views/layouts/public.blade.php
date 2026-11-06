@@ -5,6 +5,7 @@
         @isset($description)
             <meta name="description" content="{{ $description }}" />
         @endisset
+        @stack('head')
     </head>
     <body class="app-canvas flex min-h-screen flex-col text-zinc-900 antialiased dark:text-zinc-100">
         <header class="sticky top-0 z-40" x-data="{ scrolled: false }" x-on:scroll.window="scrolled = window.scrollY > 10">
@@ -35,6 +36,7 @@
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4">
                 <p>© {{ now()->year }} {{ config('app.name') }}. {{ __('For adults 18+ in the United States.') }}</p>
                 <nav class="flex flex-wrap gap-4">
+                    <a href="{{ route('areas.index') }}" class="hover:underline">{{ __('Dating near you') }}</a>
                     <a href="{{ route('legal.safety') }}" class="hover:underline">{{ __('Safety tips') }}</a>
                     <a href="{{ route('legal.guidelines') }}" class="hover:underline">{{ __('Community guidelines') }}</a>
                     <a href="{{ route('legal.terms') }}" class="hover:underline">{{ __('Terms') }}</a>

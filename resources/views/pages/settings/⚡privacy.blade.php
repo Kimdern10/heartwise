@@ -15,13 +15,18 @@ new #[Title('Privacy settings')] class extends Component {
 
     public bool $browsePrivately = false;
 
+    /** @var array<string, bool> Email notification switches */
+    public array $emails = [];
+
     public function mount(): void
     {
-        $profile = Auth::user()->profile;
+        $user = Auth::user();
+        $profile = $user->profile;
 
         $this->isVisible = $profile?->is_visible ?? true;
         $this->showLastActive = $profile?->show_last_active ?? true;
         $this->browsePrivately = $profile?->browse_privately ?? false;
+        $this->emails = $user->only(['notify_matches', 'notify_messages', 'notify_likes', 'notify_digest']);
     }
 
     #[Computed]
@@ -32,6 +37,17 @@ new #[Title('Privacy settings')] class extends Component {
 
     public function updated(string $property): void
     {
+        if (str_starts_with($property, 'emails.')) {
+            $key = substr($property, 7);
+
+            if (in_array($key, ['notify_matches', 'notify_messages', 'notify_likes', 'notify_digest'], true)) {
+                Auth::user()->forceFill([$key => (bool) $this->emails[$key]])->save();
+                Flux::toast(variant: 'success', text: __('Email settings saved.'));
+            }
+
+            return;
+        }
+
         $profile = Auth::user()->profile;
 
         if (! $profile) {
@@ -61,13 +77,24 @@ new #[Title('Privacy settings')] class extends Component {
 <section class="w-full">
     @include('partials.settings-heading')
 
-    <x-pages::settings.layout :heading="__('Privacy & blocked members')" :subheading="__('Control who sees you and what we keep about you')">
+    <x-pages::settings.layout :heading="__('Privacy, notifications & blocked')" :subheading="__('Who sees you, what we email you, and what we keep')">
         <div class="space-y-8">
             <div class="space-y-4">
                 <flux:switch wire:model.live="isVisible" :label="__('Show my profile in Discover')"
                     :description="__('Turn off to take a break. Your matches can still message you.')" />
                 <flux:switch wire:model.live="showLastActive" :label="__('Show when I was last active')" />
                 <flux:switch wire:model.live="browsePrivately" :disabled="! auth()->user()->isPremium()" :label="__('Browse privately (Premium)')" :description="__('Don’t show up in other members’ “Viewed you” list.')" />
+            </div>
+
+            <flux:separator variant="subtle" />
+
+            <div class="space-y-4" id="notifications">
+                <flux:heading>{{ __('Email notifications') }}</flux:heading>
+                <flux:text class="text-sm">{{ __('Everything always appears under the bell icon. Choose what we also email you about.') }}</flux:text>
+                <flux:switch wire:model.live="emails.notify_matches" :label="__('New matches')" />
+                <flux:switch wire:model.live="emails.notify_messages" :label="__('New messages (only when you’re away, at most once an hour)')" />
+                <flux:switch wire:model.live="emails.notify_likes" :label="__('New likes (at most every 6 hours)')" />
+                <flux:switch wire:model.live="emails.notify_digest" :label="__('Weekly “new people near you” email')" />
             </div>
 
             <flux:separator variant="subtle" />

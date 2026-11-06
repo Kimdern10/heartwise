@@ -8,12 +8,13 @@ use App\Models\Like;
 use App\Models\User;
 use App\Models\UserMatch;
 use App\Support\MessageScreener;
+use App\Support\Notifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 
 class LikeUser
 {
-    public function __construct(private MessageScreener $screener) {}
+    public function __construct(private MessageScreener $screener, private Notifier $notifier) {}
 
     /**
      * Like (or pass on) someone. A like can point at one of their photos or
@@ -48,7 +49,9 @@ class LikeUser
             $this->checkTargetItems($target, $photoId, $promptId);
         }
 
-        return DB::transaction(function () use ($user, $target, $liked, $comment, $photoId, $promptId, $spark) {
+        $alreadyLiked = Like::query()->where('user_id', $user->id)->where('target_id', $target->id)->where('liked', true)->exists();
+
+        $match = DB::transaction(function () use ($user, $target, $liked, $comment, $photoId, $promptId, $spark) {
             Like::query()->updateOrCreate(
                 ['user_id' => $user->id, 'target_id' => $target->id],
                 [
@@ -91,6 +94,17 @@ class LikeUser
 
             return $match;
         });
+
+        if ($liked && ! $alreadyLiked) {
+            if ($match?->wasRecentlyCreated) {
+                $this->notifier->match($target, $user, $match);
+                $this->notifier->match($user, $target, $match);
+            } elseif (! $match) {
+                $this->notifier->like($target, $spark);
+            }
+        }
+
+        return $match;
     }
 
     private function cleanComment(?string $comment): ?string

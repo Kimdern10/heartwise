@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\AccountStatus;
 use App\Models\ConnectionCheck;
 use App\Models\Setting;
 use App\Models\User;
@@ -26,13 +27,13 @@ class ConnectionInspector
     /**
      * @return array{blocked: bool, reason: string|null, check: ConnectionCheck|null}
      */
-    public function inspect(string $ip, ?string $browserTimezone, ?User $user): array
+    public function inspect(string $ip, ?string $browserTimezone, ?User $user, ?string $deviceId = null): array
     {
         $browserTimezone = $this->cleanTimezone($browserTimezone);
         // Settings changes bump policy_version, so new rules apply straight away.
-        $key = 'conn:'.Setting::get('policy_version').'|'.$ip.'|'.$browserTimezone.'|'.($user?->id ?? 'guest');
+        $key = 'conn:'.Setting::get('policy_version').'|'.$ip.'|'.$browserTimezone.'|'.$deviceId.'|'.($user?->id ?? 'guest');
 
-        return Cache::remember($key, now()->addHours(6), function () use ($ip, $browserTimezone, $user) {
+        return Cache::remember($key, now()->addHours(6), function () use ($ip, $browserTimezone, $user, $deviceId) {
             $info = $this->lookup($ip);
             $mismatch = $this->timezoneMismatch($browserTimezone, $info['country']);
 
@@ -46,6 +47,7 @@ class ConnectionInspector
                 $check = ConnectionCheck::query()->create([
                     'user_id' => $user?->id,
                     'ip' => $ip,
+                    'device_id' => $deviceId,
                     'country' => $info['country'],
                     'region' => $info['region'],
                     'city' => $info['city'],
@@ -64,8 +66,52 @@ class ConnectionInspector
                 $user->forceFill(['flag_reason' => $reason ?? $this->describe($info, $mismatch)])->saveQuietly();
             }
 
+            if ($user && ! $user->is_admin) {
+                $this->checkBanEvasion($user, $ip, $deviceId);
+            }
+
             return ['blocked' => $blocked, 'reason' => $reason, 'check' => $check];
         });
+    }
+
+    /**
+     * A banned member coming back with a new account usually uses the same
+     * browser (device ID) or the same internet connection (IP).
+     *  - same device: flagged, and suspended if the admin chose "suspend"
+     *  - same IP only: flagged for review (IPs can be shared, e.g. phone networks)
+     */
+    public function checkBanEvasion(User $user, string $ip, ?string $deviceId): void
+    {
+        $banned = fn ($q) => $q->where('status', 'banned');
+
+        $byDevice = $deviceId ? ConnectionCheck::query()
+            ->where('device_id', $deviceId)->where('user_id', '!=', $user->id)
+            ->whereHas('user', $banned)->value('user_id') : null;
+
+        $byIp = $byDevice ? null : ConnectionCheck::query()
+            ->where('ip', $ip)->where('user_id', '!=', $user->id)
+            ->where('created_at', '>=', now()->subDays(90))
+            ->whereHas('user', $banned)->value('user_id');
+
+        $bannedId = $byDevice ?? $byIp;
+
+        if (! $bannedId) {
+            return;
+        }
+
+        $why = $byDevice
+            ? "Same device as banned member #{$bannedId}"
+            : "Same internet connection (IP) as banned member #{$bannedId}";
+
+        $user->forceFill(['flag_reason' => $why])->saveQuietly();
+
+        if ($byDevice && Setting::get('ban_evasion') === 'suspend' && $user->isActive()) {
+            $user->forceFill([
+                'status' => AccountStatus::Suspended,
+                'suspended_until' => now()->addYears(10),
+                'status_reason' => 'Possible returning banned member — under review',
+            ])->saveQuietly();
+        }
     }
 
     /**

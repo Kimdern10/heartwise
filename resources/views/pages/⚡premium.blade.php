@@ -83,11 +83,21 @@ new #[Title('Premium')] class extends Component {
                 @endforeach
             </div>
 
+            @php($trial = Auth::user()->eligibleForTrial() ? config('premium.trial_days') : 0)
             <flux:button type="submit" variant="primary" class="w-full !h-14 !text-lg" :disabled="! $enabled" data-test="premium-checkout">
-                {{ $enabled ? __('Continue to secure checkout') : __('Payments coming soon') }}
+                @if (! $enabled)
+                    {{ __('Payments coming soon') }}
+                @elseif ($trial)
+                    {{ trans_choice('Start your :count-day free trial|Start your :count-day free trial', $trial) }}
+                @else
+                    {{ __('Continue to secure checkout') }}
+                @endif
             </flux:button>
 
             <p class="text-center text-xs leading-relaxed text-zinc-500">
+                @if ($trial)
+                    <strong>{{ __('Free for :n days, then the plan price. Cancel before the trial ends and you won’t be charged.', ['n' => $trial]) }}</strong>
+                @endif
                 {{ __('Payment is handled securely by Stripe. Your subscription renews automatically at the same price and length until you cancel. Cancel any time in one click from this page — you keep Premium until the end of the period you’ve paid for. Prices in USD; sales tax may apply.') }}
                 <a href="{{ route('legal.terms') }}" class="underline">{{ __('Terms') }}</a>
             </p>

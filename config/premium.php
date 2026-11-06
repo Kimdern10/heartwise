@@ -57,6 +57,15 @@ return [
         ['bolt', '5 Sparks a day', 'Stand out at the top of their likes.'],
         ['adjustments-horizontal', 'Advanced filters', 'Search by height, religion, family plans, habits and more.'],
         ['eye-slash', 'Browse privately', 'Look around without appearing in “Viewed you”.'],
+        ['rocket-launch', '1 Boost every week', 'Be the first profile people near you see for 30 minutes.'],
+        ['arrow-uturn-left', 'Rewind', 'Undo an accidental pass.'],
+        ['check-circle', 'Read receipts', 'See when your messages have been read.'],
     ],
+
+    // New subscribers get this many free days before the first charge (0 = no trial).
+    // Only offered to members who have never subscribed before.
+    'trial_days' => (int) env('PREMIUM_TRIAL_DAYS', 3),
+
+    'boost_minutes' => 30,
 
 ];

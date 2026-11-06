@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Rules\NotDisposableEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,10 @@ class SocialLoginController extends Controller
         }
 
         $email = $social->getEmail();
+
+        if ($email && NotDisposableEmail::isDisposable($email)) {
+            return redirect()->route('register')->with('status', __('Please use your real, permanent email address — temporary email services aren’t allowed.'));
+        }
 
         if (! $email) {
             return redirect()->route('register')->with('status', __('We need an email address to create your account. Please sign up with email instead.'));

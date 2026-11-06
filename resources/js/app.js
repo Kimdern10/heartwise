@@ -15,6 +15,31 @@ try {
 }
 
 /* ---------------------------------------------------------------
+ * Install as an app (PWA). Android/desktop Chrome offer an install
+ * prompt; we show our own "Install the app" button when they do.
+ * iPhone users add it with Share → "Add to Home Screen".
+ * ------------------------------------------------------------- */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+
+let installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    document.querySelectorAll('[data-install-app]').forEach((el) => (el.hidden = false));
+});
+
+document.addEventListener('click', async (event) => {
+    if (!event.target.closest('[data-install-app]') || !installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    document.querySelectorAll('[data-install-app]').forEach((el) => (el.hidden = true));
+});
+
+/* ---------------------------------------------------------------
  * Confirm dialog
  * Add data-confirm="Question?" to any button that has wire:click.
  * Works everywhere (the browser's own confirm() popup is blocked in

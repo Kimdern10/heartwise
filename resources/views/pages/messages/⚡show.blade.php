@@ -48,6 +48,19 @@ new class extends Component {
         return $this->match->messages()->latest('id')->limit(100)->get()->reverse()->values();
     }
 
+    /**
+     * Suggested openers, shown until I've sent my first message in this chat.
+     *
+     * @return list<string>
+     */
+    #[Computed]
+    public function icebreakers(): array
+    {
+        $iHaveWritten = $this->match->messages()->where('sender_id', Auth::id())->exists();
+
+        return $iHaveWritten ? [] : \App\Support\Icebreakers::for(Auth::user(), $this->other);
+    }
+
     public function poll(): void
     {
         $this->markRead();
@@ -67,6 +80,67 @@ new class extends Component {
         $this->body = '';
         unset($this->messages);
         $this->dispatch('message-sent');
+    }
+
+    // "Plan a date safely" form
+    public string $planWhen = '';
+    public string $planPlace = '';
+    public string $planFriendName = '';
+    public string $planFriendEmail = '';
+    public string $planNote = '';
+
+    /**
+     * Share date plans with a trusted friend, who is alerted if the member
+     * doesn't check in afterwards.
+     */
+    public function shareDatePlan(): void
+    {
+        $this->validate([
+            'planWhen' => ['required', 'date'],
+            'planPlace' => ['required', 'string', 'max:200'],
+            'planFriendName' => ['required', 'string', 'max:60'],
+            'planFriendEmail' => ['required', 'email', 'max:255', new \App\Rules\NotDisposableEmail],
+            'planNote' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        if (! \Illuminate\Support\Facades\RateLimiter::attempt('date-plan:'.Auth::id(), 3, fn () => true, 86400)) {
+            $this->addError('planWhen', __('You can share up to 3 date plans a day.'));
+
+            return;
+        }
+
+        $tz = request()->cookie('tz');
+        $tz = is_string($tz) && in_array($tz, \DateTimeZone::listIdentifiers(), true) ? $tz : 'America/Chicago';
+        $meetingAt = \Illuminate\Support\Carbon::parse($this->planWhen, $tz)->utc();
+
+        if ($meetingAt->lt(now()->subHour()) || $meetingAt->gt(now()->addDays(30))) {
+            $this->addError('planWhen', __('Pick a time in the next 30 days.'));
+
+            return;
+        }
+
+        $checkin = Auth::user()->hasMany(\App\Models\DateCheckin::class)->create([
+            'match_id' => $this->matchId,
+            'match_name' => $this->other->displayName().', '.$this->other->age().' — '.$this->other->profile?->location(),
+            'meeting_at' => $meetingAt,
+            'timezone' => $tz,
+            'place' => $this->planPlace,
+            'friend_name' => $this->planFriendName,
+            'friend_email' => $this->planFriendEmail,
+            'note' => $this->planNote ?: null,
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\Notification::route('mail', [$checkin->friend_email => $checkin->friend_name])
+                ->notify(new \App\Notifications\DateCheckinFriendMail($checkin, 'plan'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $this->reset('planWhen', 'planPlace', 'planFriendName', 'planFriendEmail', 'planNote');
+        Flux::modal('date-plan')->close();
+        Flux::toast(variant: 'success', heading: __('Plan shared with :friend', ['friend' => $checkin->friend_name]),
+            text: __('After your date, tap “I’m safe” on your Home page. If you don’t within 3 hours of the start time, we’ll email them.'));
     }
 
     public function unmatch(): void
@@ -114,6 +188,7 @@ new class extends Component {
 }; ?>
 
 @php($other = $this->other)
+@php($isPremium = Auth::user()->isPremium())
 @php($online = $other->profile?->show_last_active && $other->last_active_at?->gt(now()->subMinutes(15)))
 
 <section class="mx-auto flex h-[calc(100svh-12rem)] w-full max-w-3xl flex-col lg:h-[calc(100svh-4rem)]">
@@ -138,6 +213,7 @@ new class extends Component {
                     <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" :aria-label="__('More')" />
                     <flux:menu>
                         <flux:menu.item icon="user" :href="route('people.show', $other)" wire:navigate>{{ __('View profile') }}</flux:menu.item>
+                        <flux:menu.item icon="shield-check" x-on:click="$flux.modal('date-plan').show()" data-test="plan-date">{{ __('Plan a date safely') }}</flux:menu.item>
                         <flux:menu.item icon="arrow-uturn-left" wire:click="unmatch" data-confirm-danger data-confirm="{{ __('Unmatch :name? The chat will disappear for both of you.', ['name' => $other->displayName()]) }}" data-test="unmatch">{{ __('Unmatch') }}</flux:menu.item>
                     </flux:menu>
                 </flux:dropdown>
@@ -169,7 +245,8 @@ new class extends Component {
                         @endif
                         <div class="px-2 text-[11px] text-zinc-400 {{ $mine ? 'text-end' : '' }}">
                             {{ $message->created_at->isToday() ? $message->created_at->format('g:i A') : $message->created_at->format('D, M j · g:i A') }}
-                            @if ($mine && $message->read_at) · <span class="text-brand-500">{{ __('Seen') }}</span> @endif
+                            {{-- Read receipts are a Premium perk --}}
+                            @if ($mine && $message->read_at && $isPremium) · <span class="text-brand-500">{{ __('Seen') }}</span> @endif
                         </div>
                     </div>
                 </div>
@@ -200,6 +277,19 @@ new class extends Component {
             </div>
         @endif
 
+        {{-- Icebreakers: tap one to put it in the message box --}}
+        @if ($this->icebreakers)
+            <div class="flex gap-2 overflow-x-auto border-t border-zinc-100 px-3 pt-3 dark:border-zinc-800" data-test="icebreakers">
+                <span class="flex shrink-0 items-center gap-1 text-xs font-semibold text-zinc-500"><flux:icon.light-bulb class="size-4" />{{ __('Ideas:') }}</span>
+                @foreach ($this->icebreakers as $idea)
+                    <button type="button" wire:click="$set('body', @js($idea))"
+                        class="shrink-0 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium transition hover:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-white">
+                        {{ $idea }}
+                    </button>
+                @endforeach
+            </div>
+        @endif
+
         {{-- Composer --}}
         <form wire:submit="send" class="flex items-end gap-2 border-t border-zinc-100 p-3 dark:border-zinc-800">
             <flux:textarea wire:model="body" rows="auto" resize="none" maxlength="1000" class="flex-1"
@@ -212,4 +302,26 @@ new class extends Component {
             </button>
         </form>
     </div>
+
+    {{-- Date check-in: share plans with a trusted friend --}}
+    <flux:modal name="date-plan" class="w-full max-w-md">
+        <form wire:submit="shareDatePlan" class="space-y-4">
+            <div>
+                <flux:heading size="lg" class="font-display !text-2xl">{{ __('Plan a date safely') }}</flux:heading>
+                <flux:text>{{ __('Tell a friend where you’ll be. If you don’t tap “I’m safe” within 3 hours of the start time, we’ll email them so they can check on you.') }}</flux:text>
+            </div>
+            <flux:input type="datetime-local" wire:model="planWhen" :label="__('When')" />
+            <flux:input wire:model="planPlace" :label="__('Where (name and address)')" maxlength="200" :placeholder="__('e.g. Jo’s Coffee, 1300 S Congress Ave')" />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <flux:input wire:model="planFriendName" :label="__('Friend’s name')" maxlength="60" />
+                <flux:input type="email" wire:model="planFriendEmail" :label="__('Friend’s email')" />
+            </div>
+            <flux:textarea wire:model="planNote" rows="2" maxlength="300" :label="__('Note for your friend (optional)')" />
+            <flux:text class="text-xs">{{ __('Your friend will see :name’s first name, age and city, plus the time and place. Meet in a public place and arrange your own ride.', ['name' => $other->displayName()]) }}</flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:button type="submit" variant="primary" icon="shield-check" data-test="share-plan">{{ __('Share with my friend') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 </section>

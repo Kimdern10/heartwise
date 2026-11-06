@@ -1,2 +1,14 @@
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /discover
+Disallow: /search
+Disallow: /people/
+Disallow: /messages
+Disallow: /matches
+Disallow: /activity
+Disallow: /photos/
+Disallow: /admin
+Disallow: /settings
+Disallow: /welcome
+
+Sitemap: https://YOUR-DOMAIN.com/sitemap.xml

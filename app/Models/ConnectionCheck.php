@@ -29,7 +29,7 @@ use Illuminate\Support\Carbon;
  * @property-read User|null $user
  */
 #[Fillable([
-    'user_id', 'ip', 'country', 'region', 'city', 'ip_timezone', 'browser_timezone', 'isp',
+    'user_id', 'ip', 'device_id', 'country', 'region', 'city', 'ip_timezone', 'browser_timezone', 'isp',
     'is_vpn', 'is_hosting', 'timezone_mismatch', 'blocked', 'reason',
 ])]
 class ConnectionCheck extends Model

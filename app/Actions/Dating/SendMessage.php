@@ -7,11 +7,12 @@ use App\Models\Message;
 use App\Models\User;
 use App\Models\UserMatch;
 use App\Support\MessageScreener;
+use App\Support\Notifier;
 use Illuminate\Support\Facades\RateLimiter;
 
 class SendMessage
 {
-    public function __construct(private MessageScreener $screener) {}
+    public function __construct(private MessageScreener $screener, private Notifier $notifier) {}
 
     public function handle(User $sender, UserMatch $match, string $body): Message
     {
@@ -40,6 +41,8 @@ class SendMessage
         ]);
 
         $match->forceFill(['last_message_at' => $message->created_at])->save();
+
+        $this->notifier->message($receiver, $sender, $match, $body);
 
         return $message;
     }

@@ -33,6 +33,13 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $terms_accepted_at
  * @property Carbon|null $onboarded_at
  * @property string|null $flag_reason
+ * @property bool $notify_matches
+ * @property bool $notify_messages
+ * @property bool $notify_likes
+ * @property bool $notify_digest
+ * @property Carbon|null $last_like_email_at
+ * @property Carbon|null $last_message_email_at
+ * @property Carbon|null $last_boost_at
  * @property bool $is_admin
  * @property AccountStatus $status
  * @property Carbon|null $suspended_until
@@ -61,6 +68,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         'status' => 'active',
         'is_admin' => false,
         'is_sample' => false,
+        'notify_matches' => true,
+        'notify_messages' => true,
+        'notify_likes' => true,
+        'notify_digest' => true,
     ];
 
     /**
@@ -78,6 +89,13 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'date_of_birth' => 'date',
             'terms_accepted_at' => 'datetime',
             'onboarded_at' => 'datetime',
+            'notify_matches' => 'boolean',
+            'notify_messages' => 'boolean',
+            'notify_likes' => 'boolean',
+            'notify_digest' => 'boolean',
+            'last_like_email_at' => 'datetime',
+            'last_message_email_at' => 'datetime',
+            'last_boost_at' => 'datetime',
             'is_admin' => 'boolean',
             'status' => AccountStatus::class,
             'suspended_until' => 'datetime',
@@ -226,6 +244,33 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->is_admin || $this->subscribed('premium');
     }
 
+    public function isBoosted(): bool
+    {
+        return (bool) $this->profile?->boosted_until?->isFuture();
+    }
+
+    /**
+     * Premium members get one 30-minute Boost every 7 days.
+     */
+    public function canBoost(): bool
+    {
+        return $this->isPremium() && ! $this->is_admin
+            && (! $this->last_boost_at || $this->last_boost_at->lte(now()->subDays(7)));
+    }
+
+    public function nextBoostAt(): ?Carbon
+    {
+        return $this->last_boost_at?->addDays(7);
+    }
+
+    /**
+     * The free trial is only for people who have never subscribed before.
+     */
+    public function eligibleForTrial(): bool
+    {
+        return config('premium.trial_days') > 0 && ! $this->subscriptions()->exists();
+    }
+
     public function likesPerDay(): int
     {
         return config($this->isPremium() ? 'premium.premium.likes_per_day' : 'premium.free.likes_per_day');
@@ -242,6 +287,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function sparksPerDay(): int
     {
         return config($this->isPremium() ? 'premium.premium.sparks_per_day' : 'premium.free.sparks_per_day');
+    }
+
+    /** @return HasMany<DateCheckin, $this> */
+    public function dateCheckins(): HasMany
+    {
+        return $this->hasMany(DateCheckin::class);
     }
 
     /** @return HasMany<SocialAccount, $this> */

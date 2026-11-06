@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Like;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -90,7 +91,12 @@ class Discovery
             $query->whereNotIn('users.id', Like::query()->where('user_id', $viewer->id)->select('target_id'));
         }
 
-        return $query->orderByDesc('last_active_at')->orderByDesc('users.id');
+        // Boosted members (Premium perk) come first, then the most recently active.
+        $boosted = Profile::query()
+            ->selectRaw('CASE WHEN boosted_until > ? THEN 1 ELSE 0 END', [now()])
+            ->whereColumn('profiles.user_id', 'users.id');
+
+        return $query->orderByDesc($boosted)->orderByDesc('last_active_at')->orderByDesc('users.id');
     }
 
     /**

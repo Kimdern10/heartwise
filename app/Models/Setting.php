@@ -34,6 +34,10 @@ class Setting extends Model
         // Comma-separated IPs: always blocked, or never blocked (e.g. the owner's own IP).
         'blocked_ips' => '',
         'allowed_ips' => '',
+        // Extra throwaway email domains to refuse (comma separated).
+        'blocked_email_domains' => '',
+        // A new account on a banned member's device: flag | suspend
+        'ban_evasion' => 'flag',
     ];
 
     public static function get(string $key): string

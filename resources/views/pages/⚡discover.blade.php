@@ -3,6 +3,7 @@
 use App\Actions\Dating\LikeUser;
 use App\Exceptions\DatingActionException;
 use App\Livewire\Concerns\LikesProfiles;
+use App\Models\Like;
 use App\Models\ProfileView;
 use App\Models\User;
 use App\Models\UserMatch;
@@ -10,6 +11,7 @@ use App\Support\Discovery;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -96,11 +98,60 @@ new #[Title('Discover')] class extends Component {
         return $this->area === 'anywhere' || $pick?->profile->state === $me?->state ? $pick : null;
     }
 
+    /** The person brought back with Rewind, shown before anyone else. */
+    #[Locked]
+    public ?int $rewoundId = null;
+
     #[Computed]
     public function current(): ?User
     {
+        if ($this->rewoundId) {
+            $back = Discovery::for(Auth::user(), ['hide_seen' => true])->with('prompts')->find($this->rewoundId);
+
+            if ($back) {
+                return $back;
+            }
+        }
+
         // When the member is filtering, show what they asked for instead.
         return ($this->activeFilters === 0 ? $this->dailyPick : null) ?? $this->people->first();
+    }
+
+    /**
+     * The member's most recent pass in the last 24 hours (what Rewind would undo).
+     */
+    #[Computed]
+    public function lastPass(): ?Like
+    {
+        return Like::query()->where('user_id', Auth::id())->where('liked', false)
+            ->where('updated_at', '>=', now()->subDay())->latest('updated_at')->first();
+    }
+
+    /**
+     * Rewind (Premium): undo the last pass and show that person again.
+     */
+    public function rewind(): void
+    {
+        if (! Auth::user()->isPremium()) {
+            $this->redirectRoute('premium', navigate: true);
+
+            return;
+        }
+
+        $pass = $this->lastPass;
+
+        if (! $pass) {
+            Flux::toast(text: __('Nothing to undo.'));
+
+            return;
+        }
+
+        $this->rewoundId = $pass->target_id;
+        $pass->delete();
+
+        unset($this->lastPass);
+        $this->refreshPeople();
+        Flux::toast(text: __('Brought back — take another look.'));
     }
 
     #[Computed]
@@ -125,6 +176,7 @@ new #[Title('Discover')] class extends Component {
             return;
         }
 
+        $this->rewoundId = null;
         $this->refreshPeople();
 
         if ($match) {
@@ -134,6 +186,7 @@ new #[Title('Discover')] class extends Component {
 
     protected function afterLike(User $target, ?UserMatch $match): void
     {
+        $this->rewoundId = null;
         $this->refreshPeople();
 
         if ($match) {
@@ -145,6 +198,7 @@ new #[Title('Discover')] class extends Component {
 
     protected function afterPass(): void
     {
+        $this->rewoundId = null;
         $this->refreshPeople();
     }
 
@@ -170,7 +224,7 @@ new #[Title('Discover')] class extends Component {
 
     private function refreshPeople(): void
     {
-        unset($this->people, $this->dailyPick, $this->current);
+        unset($this->people, $this->dailyPick, $this->current, $this->lastPass);
         $this->dispatch('feed-advanced');
     }
 
@@ -202,6 +256,7 @@ new #[Title('Discover')] class extends Component {
                 @if ($this->activeFilters)<flux:badge size="sm" class="ms-1">{{ $this->activeFilters }}</flux:badge>@endif
             </flux:button>
             <flux:button icon="magnifying-glass" :href="route('search')" wire:navigate>{{ __('Search') }}</flux:button>
+            <livewire:boost-button key="boost-discover" />
         </div>
     </div>
 
@@ -313,6 +368,13 @@ new #[Title('Discover')] class extends Component {
                     class="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-white text-zinc-700 shadow-xl ring-1 ring-zinc-200 transition hover:scale-110 active:scale-95 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-zinc-700">
                     <flux:icon.x-mark class="size-7" />
                 </button>
+                @if ($this->lastPass)
+                    <button type="button" wire:click="rewind" aria-label="{{ __('Undo last pass') }}" data-test="rewind"
+                        title="{{ Auth::user()->isPremium() ? __('Undo last pass') : __('Rewind is a Premium feature') }}"
+                        class="pointer-events-auto flex size-12 items-center justify-center self-center rounded-full bg-white text-amber-500 shadow-lg ring-1 ring-zinc-200 transition hover:scale-110 dark:bg-zinc-900 dark:ring-zinc-700">
+                        <flux:icon :name="Auth::user()->isPremium() ? 'arrow-uturn-left' : 'lock-closed'" class="size-5" />
+                    </button>
+                @endif
                 <button type="button" wire:click="openLike({{ $person->id }})" aria-label="{{ __('Like') }}"
                     class="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-xl transition hover:scale-110 active:scale-95 dark:bg-white dark:text-zinc-900">
                     <flux:icon.heart variant="solid" class="size-7" />

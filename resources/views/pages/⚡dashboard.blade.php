@@ -39,6 +39,32 @@ new #[Title('Home')] class extends Component {
             ['label' => __('Unread'), 'value' => $user->unreadMessagesCount(), 'icon' => 'chat-bubble-left-right', 'route' => route('messages.index')],
         ];
     }
+
+    /**
+     * Date plans shared with a friend that still need an "I'm safe".
+     */
+    #[Computed]
+    public function checkins()
+    {
+        return Auth::user()->dateCheckins()->whereNull('safe_at')
+            ->where('meeting_at', '>=', now()->subDays(2))->orderBy('meeting_at')->get();
+    }
+
+    public function markSafe(int $id): void
+    {
+        $checkin = Auth::user()->dateCheckins()->findOrFail($id);
+        $checkin->forceFill(['safe_at' => now()])->save();
+
+        try {
+            \Illuminate\Support\Facades\Notification::route('mail', [$checkin->friend_email => $checkin->friend_name])
+                ->notify(new \App\Notifications\DateCheckinFriendMail($checkin, 'safe'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        unset($this->checkins);
+        \Flux\Flux::toast(variant: 'success', text: __('Great — we’ve let :friend know you’re safe.', ['friend' => $checkin->friend_name]));
+    }
 }; ?>
 
 @php($done = collect($this->steps)->where('done', true)->count())
@@ -46,6 +72,24 @@ new #[Title('Home')] class extends Component {
 @php($pct = (int) round($done / $total * 100))
 
 <section class="mx-auto w-full max-w-5xl space-y-6">
+    {{-- Date check-ins waiting for "I'm safe" --}}
+    @foreach ($this->checkins as $checkin)
+        <div class="flex flex-wrap items-center gap-4 rounded-3xl border-2 border-emerald-300 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-500/10" wire:key="checkin-{{ $checkin->id }}" data-test="checkin-banner">
+            <flux:icon.shield-check class="size-8 shrink-0 text-emerald-600" />
+            <div class="min-w-0 flex-1">
+                <p class="font-semibold">{{ __('Date with :who', ['who' => \Illuminate\Support\Str::before($checkin->match_name, ',')]) }} · {{ $checkin->meeting_at->copy()->setTimezone($checkin->timezone)->format('D, M j · g:i A') }}</p>
+                <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                    @if ($checkin->alert_sent_at)
+                        {{ __('We emailed :friend because you haven’t checked in. Let them know you’re okay:', ['friend' => $checkin->friend_name]) }}
+                    @else
+                        {{ __(':friend will be emailed if you don’t check in by :time.', ['friend' => $checkin->friend_name, 'time' => $checkin->alertDueAt()->setTimezone($checkin->timezone)->format('g:i A')]) }}
+                    @endif
+                </p>
+            </div>
+            <flux:button variant="primary" icon="check" wire:click="markSafe({{ $checkin->id }})" data-test="im-safe">{{ __('I’m safe') }}</flux:button>
+        </div>
+    @endforeach
+
     {{-- Hero --}}
     <div class="bg-brand-gradient relative overflow-hidden rounded-[2rem] p-6 text-white shadow-2xl shadow-brand-500/25 sm:p-8 animate-fade-up">
         <div class="absolute -end-10 -top-16 size-64 rounded-full bg-white/10 blur-2xl animate-blob"></div>
@@ -56,9 +100,12 @@ new #[Title('Home')] class extends Component {
                 <p class="text-sm font-semibold text-white/80">{{ now()->format('l') }}</p>
                 <h1 class="font-display mt-1 text-4xl sm:text-5xl">{{ __('Hi :name 👋', ['name' => Auth::user()->displayName()]) }}</h1>
                 <p class="mt-2 text-white/85">{{ __('Real people, real connections. Ready to meet someone new?') }}</p>
-                <a href="{{ route('discover') }}" wire:navigate class="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 shadow-lg transition hover:scale-105">
-                    <flux:icon.sparkles class="size-4" /> {{ __('Start swiping') }}
-                </a>
+                <div class="mt-5 flex flex-wrap items-center gap-3">
+                    <a href="{{ route('discover') }}" wire:navigate class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 shadow-lg transition hover:scale-105">
+                        <flux:icon.sparkles class="size-4" /> {{ __('Start swiping') }}
+                    </a>
+                    <livewire:boost-button key="boost-home" />
+                </div>
             </div>
 
             <div class="relative size-32 shrink-0" x-data="{ p: 0 }" x-init="setTimeout(() => p = {{ $pct }}, 150)">

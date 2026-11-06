@@ -35,8 +35,13 @@ class BillingController extends Controller
             return redirect()->route('premium.portal');
         }
 
-        return $user->newSubscription('premium', $priceId)
-            ->allowPromotionCodes()
+        $subscription = $user->newSubscription('premium', $priceId)->allowPromotionCodes();
+
+        if ($user->eligibleForTrial()) {
+            $subscription->trialDays(config('premium.trial_days'));
+        }
+
+        return $subscription
             ->checkout([
                 'success_url' => route('premium', ['welcome' => 1]),
                 'cancel_url' => route('premium'),

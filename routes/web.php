@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DataExportController;
+use App\Http\Controllers\DatingAreaController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\SocialLoginController;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +15,12 @@ Route::view('cookies', 'legal.cookies')->name('legal.cookies');
 Route::view('safety', 'legal.safety')->name('legal.safety');
 Route::view('guidelines', 'legal.guidelines')->name('legal.guidelines');
 Route::view('connection-blocked', 'blocked-connection')->name('connection.blocked');
+
+// Public city/state pages for search engines, plus the sitemap.
+Route::get('dating', [DatingAreaController::class, 'index'])->name('areas.index');
+Route::get('dating/{state}', [DatingAreaController::class, 'state'])->name('areas.state');
+Route::get('dating/{state}/{city}', [DatingAreaController::class, 'city'])->name('areas.city');
+Route::get('sitemap.xml', [DatingAreaController::class, 'sitemap'])->name('sitemap');
 
 // Sign in with Google / Apple
 Route::middleware('guest')->group(function () {

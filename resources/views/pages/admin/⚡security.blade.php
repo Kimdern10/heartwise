@@ -22,6 +22,8 @@ new #[Title('Connection security')] class extends Component {
     public bool $flagTimezone = true;
     public string $blockedIps = '';
     public string $allowedIps = '';
+    public string $blockedEmailDomains = '';
+    public string $banEvasion = 'flag';
 
     #[Url]
     public string $show = 'flagged';
@@ -35,6 +37,8 @@ new #[Title('Connection security')] class extends Component {
         $this->flagTimezone = Setting::get('flag_timezone_mismatch') === '1';
         $this->blockedIps = Setting::get('blocked_ips');
         $this->allowedIps = Setting::get('allowed_ips');
+        $this->blockedEmailDomains = Setting::get('blocked_email_domains');
+        $this->banEvasion = Setting::get('ban_evasion');
     }
 
     public function save(): void
@@ -67,6 +71,8 @@ new #[Title('Connection security')] class extends Component {
         Setting::put('flag_timezone_mismatch', $this->flagTimezone ? '1' : '0');
         Setting::put('blocked_ips', $this->blockedIps);
         Setting::put('allowed_ips', $this->allowedIps);
+        Setting::put('blocked_email_domains', strtolower(preg_replace('/\s+/', '', $this->blockedEmailDomains)));
+        Setting::put('ban_evasion', in_array($this->banEvasion, ['flag', 'suspend'], true) ? $this->banEvasion : 'flag');
         Setting::put('policy_version', (string) now()->timestamp);
 
         Flux::toast(variant: 'success', text: __('Security rules saved. They apply immediately.'));
@@ -155,6 +161,11 @@ new #[Title('Connection security')] class extends Component {
             <flux:switch wire:model="flagTimezone" :label="__('Flag devices set to a non-US timezone')" />
             <flux:switch wire:model="usOnly" :label="__('US only — block connections from other countries')"
                 :description="__('Tip: add your own IP to “Always allow” first, so you don’t lock yourself out.')" />
+
+            <flux:radio.group wire:model="banEvasion" :label="__('New account on a banned member’s device')">
+                <flux:radio value="flag" :label="__('Flag it for review')" />
+                <flux:radio value="suspend" :label="__('Suspend it automatically (you can reactivate it)')" />
+            </flux:radio.group>
         </div>
 
         <div class="space-y-4">
@@ -162,6 +173,8 @@ new #[Title('Connection security')] class extends Component {
             <flux:input wire:model="allowedCountries" :label="__('Also allow (when US only is on)')" placeholder="CA" />
             <flux:textarea wire:model="blockedIps" rows="2" :label="__('Blocked IP addresses')" />
             <flux:textarea wire:model="allowedIps" rows="2" :label="__('Always allow these IP addresses')" :placeholder="__('e.g. your own IP: ') . request()->ip()" />
+            <flux:textarea wire:model="blockedEmailDomains" rows="2" :label="__('Extra email domains to refuse')" placeholder="example-temp.com, othertemp.net"
+                :description:trailing="__(':n common throwaway email services are already blocked.', ['n' => count(config('disposable_email_domains'))])" />
         </div>
 
         <div class="flex items-center justify-between lg:col-span-2">

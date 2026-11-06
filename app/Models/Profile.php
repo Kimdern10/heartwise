@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property float|null $latitude
  * @property float|null $longitude
  * @property Carbon|null $location_verified_at
+ * @property Carbon|null $boosted_until
  * @property bool $is_visible
  * @property bool $show_last_active
  * @property bool $browse_privately
@@ -81,6 +82,7 @@ class Profile extends Model
             'latitude' => 'float',
             'longitude' => 'float',
             'location_verified_at' => 'datetime',
+            'boosted_until' => 'datetime',
             'is_visible' => 'boolean',
             'show_last_active' => 'boolean',
             'browse_privately' => 'boolean',
