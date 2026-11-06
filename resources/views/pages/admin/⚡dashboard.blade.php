@@ -87,9 +87,9 @@ new #[Title('Moderation')] class extends Component {
 <section class="w-full">
     @include('partials.admin-nav')
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         @foreach ($this->stats as $label => [$value, $link])
-            <flux:card>
+            <flux:card class="max-sm:!p-4">
                 <flux:text>{{ $label }}</flux:text>
                 <flux:heading size="xl" class="mt-1">{{ number_format($value) }}</flux:heading>
                 @if ($link && $value)
@@ -100,9 +100,9 @@ new #[Title('Moderation')] class extends Component {
     </div>
 
     <h2 class="font-display mt-10 mb-4 text-2xl">{{ __('Premium') }}</h2>
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         @foreach ($this->premium as $label => $value)
-            <flux:card>
+            <flux:card class="max-sm:!p-4">
                 <flux:text>{{ $label }}</flux:text>
                 <flux:heading size="xl" class="mt-1">{{ $value }}</flux:heading>
             </flux:card>

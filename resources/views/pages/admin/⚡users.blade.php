@@ -119,14 +119,7 @@ new #[Title('Members')] class extends Component {
                             <flux:dropdown>
                                 <flux:button size="sm" variant="ghost" icon:trailing="chevron-down" data-test="role-{{ $member->id }}">{{ $member->role->label() }}</flux:button>
                                 <flux:menu>
-                                    @foreach (\App\Enums\Role::cases() as $option)
-                                        @unless ($option === $member->role)
-                                            <flux:menu.item wire:click="changeRole({{ $member->id }}, '{{ $option->value }}')"
-                                                data-confirm="{{ __('Make :name a :role? :what', ['name' => $member->displayName(), 'role' => strtolower($option->label()), 'what' => $option->description()]) }}">
-                                                {{ __('Make :role', ['role' => strtolower($option->label())]) }}
-                                            </flux:menu.item>
-                                        @endunless
-                                    @endforeach
+                                    @include('partials.admin-role-items', ['member' => $member])
                                 </flux:menu>
                             </flux:dropdown>
                         @else

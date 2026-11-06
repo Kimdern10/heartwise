@@ -139,7 +139,7 @@ new #[Title('Activity')] class extends Component {
                     @php($person = $like->user)
                     @if (! $premium && ! ($loop->first && $this->likes->onFirstPage()) && ! $like->is_spark)
                         <a href="{{ route('premium') }}" wire:navigate wire:key="like-locked-{{ $like->id }}" class="hw-card group relative block overflow-hidden" data-reveal>
-                            <div class="aspect-[4/5] w-full bg-gradient-to-br from-rose-200 via-zinc-300 to-violet-300 dark:from-rose-900 dark:via-zinc-700 dark:to-violet-900"></div>
+                            <div class="aspect-[4/3] w-full bg-gradient-to-br from-rose-200 sm:aspect-[4/5] via-zinc-300 to-violet-300 dark:from-rose-900 dark:via-zinc-700 dark:to-violet-900"></div>
                             <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/20 text-white">
                                 <flux:icon.lock-closed class="size-8" />
                                 <span class="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-zinc-900 transition group-hover:scale-105">{{ __('See with Premium') }}</span>
@@ -149,7 +149,7 @@ new #[Title('Activity')] class extends Component {
                     @endif
                     <article wire:key="like-{{ $like->id }}" class="hw-card overflow-hidden {{ $like->is_spark ? 'ring-2 ring-amber-400' : '' }}" data-reveal>
                         <a href="{{ route('people.show', $person) }}" wire:navigate class="relative block">
-                            <x-member-photo :user="$person" class="aspect-[4/5] w-full" />
+                            <x-member-photo :user="$person" class="aspect-[4/3] w-full sm:aspect-[4/5]" />
                             @if ($like->is_spark)
                                 <span class="absolute start-3 top-3 flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950"><flux:icon.bolt variant="solid" class="size-3.5" />{{ __('Spark') }}</span>
                             @endif
@@ -190,7 +190,7 @@ new #[Title('Activity')] class extends Component {
             @unless ($premium)
                 @include('partials.premium-upsell', ['text' => trans_choice('{1} :count person viewed your profile.|[2,*] :count people viewed your profile.', $this->views->total()).' '.__('Get Premium to see who.')])
             @endunless
-            <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
                 @foreach ($this->views as $view)
                     @unless ($premium)
                         <a href="{{ route('premium') }}" wire:navigate wire:key="view-locked-{{ $loop->index }}" class="hw-card relative block overflow-hidden" data-reveal>
@@ -218,7 +218,7 @@ new #[Title('Activity')] class extends Component {
         @if ($this->favorites->isEmpty())
             @include('partials.empty-state', ['icon' => 'star', 'title' => __('No favorites yet'), 'text' => __('Tap “Favorite” on a profile to save it here for later.')])
         @else
-            <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
                 @foreach ($this->favorites as $favorite)
                     <div wire:key="fav-{{ $favorite->favorite_id }}" class="hw-card overflow-hidden" data-reveal>
                         <a href="{{ route('people.show', $favorite->favorite) }}" wire:navigate>

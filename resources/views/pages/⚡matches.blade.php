@@ -60,16 +60,16 @@ new #[Title('Matches')] class extends Component {
             </div>
         @endif
 
-        <div class="stagger grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div class="stagger grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
             @foreach ($this->matches as $match)
                 @php($other = $match->otherUser(Auth::user()))
                 <article wire:key="match-{{ $match->id }}" class="hw-card hw-card--hover group overflow-hidden">
                     <a href="{{ route('people.show', $other) }}" wire:navigate class="relative block">
                         <x-member-photo :user="$other" class="aspect-square w-full transition duration-500 group-hover:scale-[1.03]" />
-                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-4 text-white">
-                            <div class="flex items-center gap-1.5 text-lg font-bold">
-                                {{ $other->displayName() }}, {{ $other->age() }}
-                                <x-verified-badge :user="$other" class="size-5" />
+                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 text-white sm:p-4">
+                            <div class="flex min-w-0 items-center gap-1 text-base font-bold sm:gap-1.5 sm:text-lg">
+                                <span class="truncate">{{ $other->displayName() }}, {{ $other->age() }}</span>
+                                <x-verified-badge :user="$other" class="size-4 shrink-0 sm:size-5" />
                             </div>
                             <p class="text-xs text-white/80">{{ __('Matched :time', ['time' => $match->created_at->diffForHumans()]) }}</p>
                         </div>

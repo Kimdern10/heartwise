@@ -25,6 +25,9 @@ new class extends Component {
 
     public bool $alsoBlock = true;
 
+    /** Icon-only buttons on small screens (chat header). */
+    public bool $compact = false;
+
     public function report(ReportUser $reportUser): void
     {
         $this->validate([
@@ -65,16 +68,16 @@ new class extends Component {
     }
 }; ?>
 
-<div class="flex flex-wrap gap-2">
+<div @class(['flex', 'flex-wrap gap-2' => ! $compact])>
     <flux:modal.trigger :name="'report-'.$userId">
-        <flux:button size="sm" variant="ghost" icon="flag">{{ __('Report') }}</flux:button>
+        <flux:button size="sm" variant="ghost" icon="flag" :aria-label="__('Report')"><span @class(['max-sm:hidden' => $compact])>{{ __('Report') }}</span></flux:button>
     </flux:modal.trigger>
 
     <flux:button size="sm" variant="ghost" icon="no-symbol"
         wire:click="block"
         data-confirm-danger data-confirm="{{ __('Block this person? You will no longer see each other or be able to message.') }}"
         data-test="block-button">
-        {{ __('Block') }}
+        <span @class(['max-sm:hidden' => $compact])>{{ __('Block') }}</span>
     </flux:button>
 
     <flux:modal :name="'report-'.$userId" class="w-full max-w-md">

@@ -1,8 +1,22 @@
 {{-- Expects $member (User). The parent component must use the ModeratesMembers trait. --}}
-@php($iAmAdmin = auth()->user()->isAdmin())
+@php
+    $iAmAdmin = auth()->user()->isAdmin();
+    $canChangeRole = $iAmAdmin && ! $member->is(auth()->user());
+@endphp
 
 @if ($member->isStaff())
-    <flux:badge size="sm" :color="$member->isAdmin() ? 'zinc' : 'sky'">{{ $member->role->label() }}</flux:badge>
+    @if ($canChangeRole)
+        <flux:dropdown>
+            <flux:button size="sm" icon:trailing="chevron-down" data-test="staff-role-{{ $member->id }}">
+                {{ $member->role->label() }}
+            </flux:button>
+            <flux:menu>
+                @include('partials.admin-role-items', ['member' => $member])
+            </flux:menu>
+        </flux:dropdown>
+    @else
+        <flux:badge size="sm" :color="$member->isAdmin() ? 'zinc' : 'sky'">{{ $member->role->label() }}</flux:badge>
+    @endif
 @elseif ($member->isActive())
     <flux:dropdown>
         <flux:button size="sm" icon:trailing="chevron-down">{{ __('Take action') }}</flux:button>
@@ -10,6 +24,8 @@
             <flux:menu.item icon="pause" wire:click="suspend({{ $member->id }}, 7)" data-confirm-danger data-confirm="{{ __('Suspend this member for 7 days?') }}">{{ __('Suspend 7 days') }}</flux:menu.item>
             <flux:menu.item icon="pause" wire:click="suspend({{ $member->id }}, 30)" data-confirm-danger data-confirm="{{ __('Suspend this member for 30 days?') }}">{{ __('Suspend 30 days') }}</flux:menu.item>
             @if ($iAmAdmin)
+                <flux:menu.separator />
+                @include('partials.admin-role-items', ['member' => $member])
                 <flux:menu.separator />
                 <flux:menu.item icon="no-symbol" variant="danger" wire:click="ban({{ $member->id }})" data-confirm-danger data-confirm="{{ __('Ban this member permanently? They will be logged out and hidden.') }}">{{ __('Ban') }}</flux:menu.item>
             @endif

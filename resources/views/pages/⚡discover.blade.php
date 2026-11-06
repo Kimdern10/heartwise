@@ -205,17 +205,17 @@ new #[Title('Discover')] class extends Component {
 }; ?>
 
 <section class="mx-auto w-full max-w-6xl space-y-6" x-data="{ filters: false }" x-on:feed-advanced.window="window.scrollTo({ top: 0, behavior: 'smooth' })">
-    <div class="flex flex-wrap items-end justify-between gap-4 animate-fade-up">
+    <div class="flex flex-wrap items-end justify-between gap-3 animate-fade-up sm:gap-4">
         <div>
             <flux:heading size="xl" level="1" class="font-display !text-4xl">{{ __('Discover') }}</flux:heading>
-            <flux:subheading size="lg">{{ $view === 'feed' ? __('Like a photo or answer that catches your eye — add a comment to stand out.') : __('Swipe right to like, left to pass.') }}</flux:subheading>
+            <flux:subheading size="lg" class="max-sm:hidden">{{ $view === 'feed' ? __('Like a photo or answer that catches your eye — add a comment to stand out.') : __('Swipe right to like, left to pass.') }}</flux:subheading>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <div class="flex rounded-full bg-zinc-100 p-1 text-sm font-semibold dark:bg-zinc-800">
                 @foreach (['feed' => ['rectangle-stack', __('Profiles')], 'swipe' => ['hand-raised', __('Swipe')]] as $mode => [$icon, $label])
                     <button type="button" wire:click="$set('view', '{{ $mode }}')"
-                        class="flex items-center gap-1.5 rounded-full px-4 py-1.5 transition {{ $view === $mode ? 'bg-white text-zinc-900 shadow dark:bg-zinc-950 dark:text-white' : 'text-zinc-500' }}">
+                        class="flex items-center gap-1.5 rounded-full px-3 py-1.5 transition sm:px-4 {{ $view === $mode ? 'bg-white text-zinc-900 shadow dark:bg-zinc-950 dark:text-white' : 'text-zinc-500' }}">
                         <flux:icon :name="$icon" class="size-4" /> {{ $label }}
                     </button>
                 @endforeach
@@ -223,7 +223,7 @@ new #[Title('Discover')] class extends Component {
             <flux:button icon="adjustments-horizontal" x-on:click="filters = ! filters">
                 @if ($this->activeFilters)<flux:badge size="sm" class="ms-1">{{ $this->activeFilters }}</flux:badge>@endif
             </flux:button>
-            <flux:button icon="magnifying-glass" :href="route('search')" wire:navigate>{{ __('Search') }}</flux:button>
+            <flux:button icon="magnifying-glass" :href="route('search')" wire:navigate :aria-label="__('Search')"><span class="max-sm:hidden">{{ __('Search') }}</span></flux:button>
             <livewire:boost-button key="boost-discover" />
         </div>
     </div>

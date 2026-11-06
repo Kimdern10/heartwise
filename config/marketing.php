@@ -16,8 +16,8 @@ return [
     'photos' => [
         // Smiling woman in the sunlight - unsplash.com/photos/D20wICKIqFY
         'portrait-1' => 'https://images.unsplash.com/photo-1743642887694-12042391ede9',
-        // Young man outdoors - unsplash.com/photos/znbCV1MIlM0
-        'portrait-2' => 'https://images.unsplash.com/photo-1762708590808-c453c0e4fb0f',
+        // Smiling man in a white tee - unsplash.com/photos/iFgRcqHznqg
+        'portrait-2' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
         // Smiling woman in a floral dress - unsplash.com/photos/C-rfXWOrllg
         'portrait-3' => 'https://images.unsplash.com/photo-1773216282433-1d79669534c6',
     ],

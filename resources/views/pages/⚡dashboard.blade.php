@@ -179,9 +179,9 @@ new #[Title('Home')] class extends Component {
             <flux:heading size="lg">{{ __('Get the most out of :app', ['app' => config('app.name')]) }}</flux:heading>
             <span class="text-sm font-semibold text-zinc-500">{{ $done }}/{{ $total }}</span>
         </div>
-        <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+        <ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             @foreach ($this->steps as $step)
-                <li>
+                <li class="min-w-0">
                     <a href="{{ $step['route'] }}" @if (! str_contains($step['route'], '#')) wire:navigate @endif
                         class="flex items-center gap-3 rounded-2xl border p-3.5 transition {{ $step['done'] ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-500/5' : 'border-zinc-200 hover:border-brand-300 hover:bg-brand-50/50 dark:border-zinc-800 dark:hover:bg-white/5' }}">
                         <span class="flex size-10 shrink-0 items-center justify-center rounded-xl {{ $step['done'] ? 'bg-emerald-500 text-white' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800' }}">

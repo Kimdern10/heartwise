@@ -258,28 +258,28 @@ new #[Title('Search')] class extends Component {
                     <flux:button class="mt-5" wire:click="resetFilters">{{ __('Clear filters') }}</flux:button>
                 </div>
             @else
-                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" wire:loading.class="opacity-60 transition">
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4" wire:loading.class="opacity-60 transition">
                     @foreach ($this->results as $person)
                         @php($online = $person->profile->show_last_active && $person->last_active_at?->gt(now()->subMinutes(15)))
                         <a href="{{ route('people.show', $person) }}" wire:navigate wire:key="r-{{ $person->id }}" class="hw-card hw-card--hover group block overflow-hidden" data-reveal>
                             <div class="relative">
                                 <x-member-photo :user="$person" class="aspect-[4/5] w-full transition duration-500 group-hover:scale-[1.03]" />
                                 @if ($online)
-                                    <span class="absolute start-3 top-3 flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 backdrop-blur"><span class="size-2 rounded-full bg-emerald-500"></span>{{ __('Online') }}</span>
+                                    <span class="absolute start-2 top-2 flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[11px] sm:start-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-xs font-semibold text-emerald-700 backdrop-blur"><span class="size-2 rounded-full bg-emerald-500"></span>{{ __('Online') }}</span>
                                 @endif
                                 @if ($me)
-                                    <span class="absolute end-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-xs font-bold text-white backdrop-blur">{{ \App\Support\Compatibility::score($me, $person->profile) }}%</span>
+                                    <span class="absolute end-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[11px] sm:end-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-xs font-bold text-white backdrop-blur">{{ \App\Support\Compatibility::score($me, $person->profile) }}%</span>
                                 @endif
                             </div>
-                            <div class="space-y-1 p-4">
-                                <p class="flex items-center gap-1.5 text-lg font-semibold">
-                                    {{ $person->displayName() }}, {{ $person->age() }}
-                                    <x-verified-badge :user="$person" class="size-5" />
-                                    <x-location-badge :user="$person" class="size-4" />
-                                </p>
-                                <p class="text-sm text-zinc-500">{{ $person->profile->location() }}@if ($miles = $me?->milesFrom($person->profile)) · {{ $miles }} mi @endif</p>
+                            <div class="min-w-0 space-y-1 p-3 sm:p-4">
+                                <div class="flex items-center gap-1 text-base font-semibold sm:gap-1.5 sm:text-lg">
+                                    <span class="truncate">{{ $person->displayName() }}, {{ $person->age() }}</span>
+                                    <x-verified-badge :user="$person" class="size-4 shrink-0 sm:size-5" />
+                                    <x-location-badge :user="$person" class="size-4 shrink-0" />
+                                </div>
+                                <p class="truncate text-xs text-zinc-500 sm:text-sm">{{ $person->profile->location() }}@if ($miles = $me?->milesFrom($person->profile)) · {{ $miles }} mi @endif</p>
                                 @if ($person->profile->relationship_goal)
-                                    <p class="text-sm">{{ $person->profile->relationship_goal->label() }}</p>
+                                    <p class="truncate text-xs sm:text-sm">{{ $person->profile->relationship_goal->label() }}</p>
                                 @endif
                             </div>
                         </a>

@@ -208,7 +208,7 @@ new class extends Component {
                     <p class="text-xs text-zinc-500">{{ $online ? __('Active now') : $other->profile?->location() }}</p>
                 </div>
             </a>
-            <div class="ms-auto flex items-center gap-1">
+            <div class="ms-auto flex shrink-0 items-center gap-1">
                 <flux:dropdown align="end">
                     <flux:button size="sm" variant="ghost" icon="ellipsis-horizontal" :aria-label="__('More')" />
                     <flux:menu>
@@ -217,7 +217,7 @@ new class extends Component {
                         <flux:menu.item icon="arrow-uturn-left" wire:click="unmatch" data-confirm-danger data-confirm="{{ __('Unmatch :name? The chat will disappear for both of you.', ['name' => $other->displayName()]) }}" data-test="unmatch">{{ __('Unmatch') }}</flux:menu.item>
                     </flux:menu>
                 </flux:dropdown>
-                <livewire:report-block :user-id="$other->id" :key="'rb-chat-'.$other->id" />
+                <livewire:report-block :user-id="$other->id" compact :key="'rb-chat-'.$other->id" />
             </div>
         </div>
 

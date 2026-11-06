@@ -60,3 +60,22 @@ test('staff cannot be suspended', function () {
     Livewire::test('pages::admin.users')->call('suspend', $moderator->id, 7);
     expect($moderator->fresh()->isActive())->toBeTrue();
 });
+
+test('admins see a role menu on staff rows to move a moderator back to admin or member', function () {
+    $moderator = User::factory()->moderator()->create();
+    $this->actingAs(User::factory()->admin()->create());
+
+    Livewire::test('pages::admin.users')
+        ->assertSeeHtml('data-test="staff-role-'.$moderator->id.'"')
+        ->assertSee('Make admin')
+        ->assertSee('Remove staff role (back to member)');
+});
+
+test('moderators do not see role menus', function () {
+    $other = User::factory()->moderator()->create();
+    $this->actingAs(User::factory()->moderator()->create());
+
+    Livewire::test('pages::admin.users')
+        ->assertDontSeeHtml('data-test="staff-role-'.$other->id.'"')
+        ->assertDontSee('Make admin');
+});

@@ -42,7 +42,7 @@ new class extends Component {
         </span>
     @else
         <a href="{{ route('premium') }}" wire:navigate class="inline-flex items-center gap-2 rounded-full border border-violet-300 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-500/10">
-            <flux:icon.rocket-launch class="size-4" /> {{ __('Boost (Premium)') }}
+            <flux:icon.rocket-launch class="size-4" /> {{ __('Boost') }}<span class="max-sm:hidden">{{ __(' (Premium)') }}</span>
         </a>
     @endif
 </div>

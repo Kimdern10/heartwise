@@ -53,7 +53,7 @@ new #[Title('Photo review')] class extends Component {
     @if ($this->photos->isEmpty())
         <flux:card class="py-10 text-center"><flux:text>{{ __('No photos waiting. 🎉') }}</flux:text></flux:card>
     @else
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             @foreach ($this->photos as $photo)
                 <flux:card wire:key="photo-{{ $photo->id }}" class="space-y-3 !p-3">
                     <a href="{{ $photo->url() }}" target="_blank">
