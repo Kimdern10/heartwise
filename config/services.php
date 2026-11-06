@@ -48,6 +48,12 @@ return [
     ],
 
     // IP intelligence used to spot VPNs, proxies and data centres (see App\Support\ConnectionInspector).
+    // Official city names from typed text or GPS (OpenStreetMap Nominatim, free, no key).
+    'geocoder' => [
+        'enabled' => env('GEOCODER_ENABLED', true),
+        'url' => env('GEOCODER_URL', 'https://nominatim.openstreetmap.org'),
+    ],
+
     'ip_intel' => [
         'driver' => env('IP_INTEL_DRIVER', 'proxycheck'),
         'proxycheck_key' => env('PROXYCHECK_KEY'),

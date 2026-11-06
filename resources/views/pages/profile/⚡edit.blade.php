@@ -6,6 +6,7 @@ use App\Enums\RelationshipGoal;
 use App\Enums\Seeking;
 use App\Models\Photo;
 use App\Models\Profile;
+use App\Support\CityResolver;
 use App\Support\ImageProcessor;
 use App\Support\MessageScreener;
 use Flux\Flux;
@@ -90,13 +91,22 @@ new #[Title('My profile')] class extends Component {
             return;
         }
 
+        // One official name per city, so neighbours really match ("nyc" → "New York").
+        ['city' => $city, 'error' => $cityError] = CityResolver::clean($validated['city'], $validated['state']);
+
+        if ($cityError) {
+            $this->addError('city', $cityError);
+
+            return;
+        }
+
         $data = [
             'display_name' => trim($validated['display_name']),
             'gender' => $validated['gender'],
             'seeking' => $validated['seeking'],
             'relationship_goal' => $validated['relationship_goal'] ?: null,
             'bio' => trim($validated['bio']) ?: null,
-            'city' => trim($validated['city']),
+            'city' => $city,
             'state' => $validated['state'],
             'height_cm' => filled($this->height_feet)
                 ? (int) round(((int) $this->height_feet * 12 + (int) $this->height_inches) * 2.54)
@@ -184,6 +194,17 @@ new #[Title('My profile')] class extends Component {
             $this->addError('location', __('Your device doesn’t seem to be in :state right now. If you moved, update your state above and save, then try again.', [
                 'state' => config('dating.us_states.'.$profile->state),
             ]));
+
+            return;
+        }
+
+        // Use the official name of the city the phone is in, so the member lands in the right city.
+        $found = CityResolver::fromCoordinates($latitude, $longitude);
+        if ($found && $found['state'] === $profile->state && mb_strtolower($found['city']) !== mb_strtolower((string) $profile->city)) {
+            $profile->update(['city' => $found['city']]);
+            $this->city = $found['city'];
+            unset($this->profile);
+            Flux::toast(variant: 'success', text: __('Location verified! Your city is now :city, so you’ll see people near you.', ['city' => $found['city']]));
 
             return;
         }

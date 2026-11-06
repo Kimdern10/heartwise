@@ -6,6 +6,7 @@ use App\Enums\RelationshipGoal;
 use App\Enums\Seeking;
 use App\Models\Photo;
 use App\Models\Profile;
+use App\Support\CityResolver;
 use App\Support\Geo;
 use App\Support\ImageProcessor;
 use App\Support\MessageScreener;
@@ -202,6 +203,19 @@ new #[Layout('layouts::onboarding')] #[Title('Create your profile')] class exten
             }
         }
 
+        // One official name per city, so neighbours really match ("nyc" → "New York").
+        if ($this->step === 'location') {
+            ['city' => $city, 'error' => $error] = CityResolver::clean($this->city, $this->state);
+
+            if ($error) {
+                $this->addError('city', $error);
+
+                return false;
+            }
+
+            $this->city = $city;
+        }
+
         if ($this->step === 'photos' && $this->photos->isEmpty()) {
             $this->addError('uploads', __('Add at least one photo of yourself to continue.'));
 
@@ -233,6 +247,12 @@ new #[Layout('layouts::onboarding')] #[Title('Create your profile')] class exten
         $this->state = $state;
         $this->lat = $lat;
         $this->lng = $lng;
+
+        if ($found = CityResolver::fromCoordinates($lat, $lng)) {
+            $this->state = $found['state'];
+            $this->city = $found['city'];
+            $this->resetErrorBag('city');
+        }
         $this->resetErrorBag('state');
         $this->saveDraft();
     }

@@ -222,7 +222,7 @@ new class extends Component {
         </div>
 
         {{-- Messages --}}
-        <div wire:poll.4s="poll"
+        <div wire:poll.3s.keep-alive="poll"
             x-data="{ toBottom() { this.$el.scrollTop = this.$el.scrollHeight } }"
             x-init="toBottom()"
             x-on:message-sent.window="$nextTick(() => toBottom())"

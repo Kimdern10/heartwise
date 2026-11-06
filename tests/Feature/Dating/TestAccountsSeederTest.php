@@ -61,5 +61,5 @@ test('test15 can try matching in New York', function () {
 
     $this->actingAs($andre)->get(route('discover'))->assertOk()->assertSee('People in New York, NY')->assertDontSee('Sophia');
     $this->actingAs($andre)->get(route('messages.index'))->assertOk()->assertSee('Isabella')->assertSee('Zoe');
-    $this->actingAs($andre)->get(route('search', ['city' => 'Brooklyn']))->assertOk()->assertSee('Aaliyah');
+    $this->actingAs($andre)->get(route('search', ['city' => 'Yonkers']))->assertOk()->assertSee('Aaliyah');
 });

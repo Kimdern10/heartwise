@@ -33,7 +33,6 @@ new #[Title('Search')] class extends Component {
     #[Url] public bool $online = false;
     #[Url] public bool $verified = false;
     #[Url] public bool $hasPrompts = false;
-    #[Url] public bool $hideSeen = false;
     #[Url] public string $sort = 'active';
 
     public function mount(): void
@@ -110,7 +109,8 @@ new #[Title('Search')] class extends Component {
             'state' => $this->myState(),
             'city' => $this->city ?: $this->myCity(),
             'online' => $this->online, 'verified' => $this->verified, 'has_prompts' => $this->hasPrompts,
-            'hide_seen' => $this->hideSeen,
+            // People I've already liked or passed never show again.
+            'hide_seen' => true,
         ];
 
         // Advanced filters are a Premium perk.
@@ -185,7 +185,6 @@ new #[Title('Search')] class extends Component {
                     <x-check wire:model.live="online" :label="__('Online now')" />
                     <x-check wire:model.live="verified" :label="__('Photo verified')" />
                     <x-check wire:model.live="hasPrompts" :label="__('Has answered prompts')" />
-                    <x-check wire:model.live="hideSeen" :label="__('Hide people I already liked or passed')" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">

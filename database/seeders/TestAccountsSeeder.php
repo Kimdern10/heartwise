@@ -40,7 +40,7 @@ use RuntimeException;
  *   - a match with test16 that already has a chat (her last message is unread)
  *   - a match with test17 with no messages yet
  *   - likes waiting from test18 (comment), test19 (Spark) and test20 (photo): like back to match
- *   - test21–test24 (New York) and test25 (Brooklyn) haven't liked anyone yet: like them as
+ *   - test21–test24 (New York) and test25 (Yonkers) haven't liked anyone yet: like them as
  *     test15, then log in as them and like back
  *   - test26 (Noah) is another man in New York, so the women have someone to see too
  */
@@ -73,7 +73,7 @@ class TestAccountsSeeder extends Seeder
         22 => ['Priya', 'woman', 29, RelationshipGoal::NotSure, 'Software engineer', [40.7411, -73.9897], 'New York', 'NY'],
         23 => ['Maya', 'woman', 26, RelationshipGoal::Dating, 'Bartender', [40.7265, -73.9815], 'New York', 'NY'],
         24 => ['Julia', 'woman', 34, RelationshipGoal::Marriage, 'Lawyer', [40.7736, -73.9566], 'New York', 'NY'],
-        25 => ['Aaliyah', 'woman', 30, RelationshipGoal::LongTerm, 'Nurse', [40.6782, -73.9442], 'Brooklyn', 'NY'],
+        25 => ['Aaliyah', 'woman', 30, RelationshipGoal::LongTerm, 'Nurse', [40.9312, -73.8988], 'Yonkers', 'NY'],
         26 => ['Noah', 'man', 30, RelationshipGoal::LongTerm, 'Photographer', [40.7128, -74.0060], 'New York', 'NY'],
     ];
 
@@ -263,7 +263,7 @@ class TestAccountsSeeder extends Seeder
         Like::create(['user_id' => $u[20]->id, 'target_id' => $u[15]->id, 'liked' => true,
             'photo_id' => $u[15]->approvedPhotos->first()->id]);
 
-        // test21–test24 (New York) and test25 (Brooklyn) haven't liked anyone yet.
+        // test21–test24 (New York) and test25 (Yonkers) haven't liked anyone yet.
     }
 
     private function mutual(User $a, User $b): void

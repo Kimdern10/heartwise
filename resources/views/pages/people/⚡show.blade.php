@@ -18,6 +18,10 @@ new class extends Component {
     #[Locked]
     public int $personId;
 
+    /** Where to go after a like or pass (the list the member came from). */
+    #[Locked]
+    public string $backTo = '';
+
     public function mount(User $user): void
     {
         $viewer = Auth::user();
@@ -29,6 +33,7 @@ new class extends Component {
         abort_unless($visible, 404);
 
         $this->personId = $user->id;
+        $this->backTo = $this->listUrl(url()->previous());
 
         ProfileView::record($viewer, $user);
     }
@@ -93,12 +98,23 @@ new class extends Component {
             $this->dispatch('matched', name: $target->displayName(), url: route('messages.show', $match));
         } else {
             Flux::toast(variant: 'success', text: __('Like sent! If :name likes you back, it’s a match.', ['name' => $target->displayName()]));
+
+            // Liked people leave the list, so head back to it.
+            $this->redirect($this->backTo ?: route('discover'), navigate: true);
         }
     }
 
     protected function afterPass(): void
     {
-        $this->redirectRoute('discover', navigate: true);
+        $this->redirect($this->backTo ?: route('discover'), navigate: true);
+    }
+
+    /** Only send people back to the lists where liked or passed people disappear. */
+    private function listUrl(string $previous): string
+    {
+        $path = parse_url($previous, PHP_URL_PATH) ?: '';
+
+        return str_starts_with($previous, url('/')) && preg_match('#^/(discover|search|activity)(/|$)#', $path) ? $previous : '';
     }
 
     public function render()
