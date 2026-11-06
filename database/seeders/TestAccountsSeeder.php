@@ -24,7 +24,7 @@ use RuntimeException;
  *   php artisan db:seed --class=TestAccountsSeeder     (create / reset)
  *   php artisan app:remove-test-accounts               (delete them all)
  *
- * Log in as test1@heartwise.test … test14@heartwise.test, password: password
+ * Log in as test1@heartwise.test … test26@heartwise.test, password: password
  *   test1–test7  = men looking for women   (test1 is a FREE member, test2 is PREMIUM)
  *   test8–test14 = women looking for men
  *
@@ -35,6 +35,14 @@ use RuntimeException;
  *   - likes waiting from test11 (comment on a prompt), test12 (Spark) and test13 (photo)
  *   - test14 has not liked anyone: like her as test1, then log in as test14 and like back
  * test2 (Premium) has likes from test11–test14 so you can compare free vs Premium.
+ *
+ * NEW YORK: log in as test15@heartwise.test (Andre, Premium, New York, NY):
+ *   - a match with test16 that already has a chat (her last message is unread)
+ *   - a match with test17 with no messages yet
+ *   - likes waiting from test18 (comment), test19 (Spark) and test20 (photo): like back to match
+ *   - test21–test24 (New York) and test25 (Brooklyn) haven't liked anyone yet: like them as
+ *     test15, then log in as them and like back
+ *   - test26 (Noah) is another man in New York, so the women have someone to see too
  */
 class TestAccountsSeeder extends Seeder
 {
@@ -53,6 +61,20 @@ class TestAccountsSeeder extends Seeder
         12 => ['Emma', 'woman', 35, RelationshipGoal::LongTerm, 'Lawyer', [30.22, -97.80], 'Austin'],
         13 => ['Chloe', 'woman', 25, RelationshipGoal::Dating, 'Barista', [30.45, -97.62], 'Pflugerville'],
         14 => ['Grace', 'woman', 31, RelationshipGoal::LongTerm, 'Physical therapist', [30.28, -97.73], 'Austin'],
+
+        // New York, NY (test15 is the login for trying matching there)
+        15 => ['Andre', 'man', 32, RelationshipGoal::LongTerm, 'Architect', [40.7484, -73.9857], 'New York', 'NY'],
+        16 => ['Isabella', 'woman', 29, RelationshipGoal::LongTerm, 'Product designer', [40.7306, -73.9866], 'New York', 'NY'],
+        17 => ['Zoe', 'woman', 27, RelationshipGoal::Dating, 'Journalist', [40.7831, -73.9712], 'New York', 'NY'],
+        18 => ['Nia', 'woman', 31, RelationshipGoal::Marriage, 'Doctor', [40.8116, -73.9465], 'New York', 'NY'],
+        19 => ['Hannah', 'woman', 30, RelationshipGoal::LongTerm, 'Teacher', [40.7580, -73.9855], 'New York', 'NY'],
+        20 => ['Camila', 'woman', 28, RelationshipGoal::Dating, 'Dancer', [40.7193, -74.0007], 'New York', 'NY'],
+        21 => ['Leah', 'woman', 33, RelationshipGoal::LongTerm, 'Financial analyst', [40.7069, -74.0113], 'New York', 'NY'],
+        22 => ['Priya', 'woman', 29, RelationshipGoal::NotSure, 'Software engineer', [40.7411, -73.9897], 'New York', 'NY'],
+        23 => ['Maya', 'woman', 26, RelationshipGoal::Dating, 'Bartender', [40.7265, -73.9815], 'New York', 'NY'],
+        24 => ['Julia', 'woman', 34, RelationshipGoal::Marriage, 'Lawyer', [40.7736, -73.9566], 'New York', 'NY'],
+        25 => ['Aaliyah', 'woman', 30, RelationshipGoal::LongTerm, 'Nurse', [40.6782, -73.9442], 'Brooklyn', 'NY'],
+        26 => ['Noah', 'man', 30, RelationshipGoal::LongTerm, 'Photographer', [40.7128, -74.0060], 'New York', 'NY'],
     ];
 
     private const PROMPTS = [
@@ -79,7 +101,9 @@ class TestAccountsSeeder extends Seeder
         }
 
         $this->subscribePremium($users[2]);
+        $this->subscribePremium($users[15]);
         $this->buildScenarios($users);
+        $this->buildNewYorkScenarios($users);
     }
 
     /**
@@ -93,7 +117,7 @@ class TestAccountsSeeder extends Seeder
         return $users->count();
     }
 
-    private function createPerson(int $n, string $name, string $gender, int $age, RelationshipGoal $goal, string $job, array $coords, string $city): User
+    private function createPerson(int $n, string $name, string $gender, int $age, RelationshipGoal $goal, string $job, array $coords, string $city, string $state = 'TX'): User
     {
         $isMan = $gender === 'man';
 
@@ -112,7 +136,7 @@ class TestAccountsSeeder extends Seeder
             'relationship_goal' => $goal,
             'bio' => "Test account #{$n} for trying out {$this->app()}. Not a real person.",
             'city' => $city,
-            'state' => 'TX',
+            'state' => $state,
             'height_cm' => $isMan ? 175 + $n : 160 + ($n % 5) * 2,
             'job_title' => $job,
             'education' => ['bachelors', 'masters', 'some_college', 'associates'][$n % 4],
@@ -205,6 +229,41 @@ class TestAccountsSeeder extends Seeder
             Like::create(['user_id' => $u[$n]->id, 'target_id' => $u[2]->id, 'liked' => true,
                 'comment' => $n === 14 ? 'Fellow coffee snob? 👀' : null]);
         }
+    }
+
+    /**
+     * New York: log in as test15 (Andre, Premium, so likes are unlimited).
+     *
+     * @param  array<int, User>  $u
+     */
+    private function buildNewYorkScenarios(array $u): void
+    {
+        // A match that already has a short chat (her last message is unread).
+        $this->mutual($u[15], $u[16]);
+        $chat = UserMatch::between($u[15], $u[16])->first();
+        $lines = [
+            [16, 'Hi Andre! An architect — what’s your favourite building in the city?', 90],
+            [15, 'The Flatiron, every time. Yours?', 75],
+            [16, 'The library on 5th. Coffee near Bryant Park sometime?', 20],
+        ];
+        foreach ($lines as [$from, $text, $minutesAgo]) {
+            $msg = $chat->messages()->create(['sender_id' => $u[$from]->id, 'body' => $text]);
+            $msg->forceFill(['created_at' => now()->subMinutes($minutesAgo), 'read_at' => $minutesAgo > 30 ? now() : null])->save();
+        }
+        $chat->forceFill(['last_message_at' => now()->subMinutes(20)])->save();
+
+        // A fresh match, nobody has said hello yet.
+        $this->mutual($u[15], $u[17]);
+
+        // People who already like Andre: like them back to match instantly.
+        Like::create(['user_id' => $u[18]->id, 'target_id' => $u[15]->id, 'liked' => true,
+            'prompt_id' => $u[15]->prompts->first()->id, 'comment' => 'Okay, I need the story behind this answer 😄']);
+        Like::create(['user_id' => $u[19]->id, 'target_id' => $u[15]->id, 'liked' => true, 'is_spark' => true,
+            'comment' => 'Spark! You seem lovely ✨']);
+        Like::create(['user_id' => $u[20]->id, 'target_id' => $u[15]->id, 'liked' => true,
+            'photo_id' => $u[15]->approvedPhotos->first()->id]);
+
+        // test21–test24 (New York) and test25 (Brooklyn) haven't liked anyone yet.
     }
 
     private function mutual(User $a, User $b): void

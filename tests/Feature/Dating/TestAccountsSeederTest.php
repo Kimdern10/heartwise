@@ -8,13 +8,13 @@ use Illuminate\Support\Facades\Storage;
 
 beforeEach(fn () => Storage::fake('local'));
 
-test('the seeder creates 14 ready-to-use test accounts with matches and chats', function () {
+test('the seeder creates 26 ready-to-use test accounts with matches and chats', function () {
     $this->seed(TestAccountsSeeder::class);
 
     $test1 = User::where('email', 'test1@heartwise.test')->first();
     $test2 = User::where('email', 'test2@heartwise.test')->first();
 
-    expect(User::where('is_sample', true)->count())->toBe(14)
+    expect(User::where('is_sample', true)->count())->toBe(26)
         ->and($test1->isOnboarded())->toBeTrue()
         ->and($test1->isPremium())->toBeFalse()
         ->and($test2->isPremium())->toBeTrue()
@@ -29,7 +29,7 @@ test('running it again resets instead of duplicating', function () {
     $this->seed(TestAccountsSeeder::class);
     $this->seed(TestAccountsSeeder::class);
 
-    expect(User::where('is_sample', true)->count())->toBe(14);
+    expect(User::where('is_sample', true)->count())->toBe(26);
 });
 
 test('one command removes every test account', function () {
@@ -48,3 +48,18 @@ test('the test accounts can never be created on the live site', function () {
 
     (new TestAccountsSeeder)->run();
 })->throws(RuntimeException::class);
+
+test('test15 can try matching in New York', function () {
+    $this->seed(TestAccountsSeeder::class);
+
+    $andre = User::where('email', 'test15@heartwise.test')->first();
+
+    expect($andre->profile->state)->toBe('NY')
+        ->and($andre->profile->city)->toBe('New York')
+        ->and($andre->isPremium())->toBeTrue()
+        ->and(UserMatch::involving($andre)->count())->toBe(2);
+
+    $this->actingAs($andre)->get(route('discover'))->assertOk()->assertSee('People in New York, NY')->assertDontSee('Sophia');
+    $this->actingAs($andre)->get(route('messages.index'))->assertOk()->assertSee('Isabella')->assertSee('Zoe');
+    $this->actingAs($andre)->get(route('search', ['city' => 'Brooklyn']))->assertOk()->assertSee('Aaliyah');
+});

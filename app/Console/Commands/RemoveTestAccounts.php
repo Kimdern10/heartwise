@@ -8,7 +8,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('app:remove-test-accounts')]
-#[Description('Delete the 14 test accounts (test1–test14@heartwise.test) and everything they created')]
+#[Description('Delete the test accounts (test1–test26@heartwise.test) and everything they created')]
 class RemoveTestAccounts extends Command
 {
     public function handle(): int
