@@ -96,12 +96,12 @@
                 <flux:icon.device-phone-mobile class="size-4" /> {{ __('Install the app') }}
             </button>
 
-            <div class="bg-brand-gradient relative overflow-hidden rounded-2xl p-4 text-white {{ $isAdmin ? 'hidden' : 'hidden lg:block' }}">
-                <div class="absolute -end-6 -top-6 size-24 rounded-full bg-white/15 blur-xl"></div>
-                <flux:icon.shield-check class="size-6" />
-                <p class="mt-2 text-sm font-semibold">{{ __('Date safely') }}</p>
-                <p class="mt-1 text-xs text-white/80">{{ __('Never send money or gift cards to someone you met online.') }}</p>
-                <a href="{{ route('legal.safety') }}" target="_blank" class="mt-3 inline-block text-xs font-semibold underline underline-offset-2">{{ __('Safety tips') }} →</a>
+            {{-- shrink-0: never squashed (the sidebar scrolls instead on short screens) --}}
+            <div class="bg-brand-gradient relative shrink-0 overflow-hidden rounded-2xl px-4 py-3 text-white {{ $isAdmin ? 'hidden' : 'hidden lg:block' }}" data-test="date-safely">
+                <div class="pointer-events-none absolute -end-6 -top-6 size-24 rounded-full bg-white/15 blur-xl"></div>
+                <p class="flex items-center gap-2 text-sm font-semibold"><flux:icon.shield-check class="size-5 shrink-0" />{{ __('Date safely') }}</p>
+                <p class="mt-1 text-xs leading-snug text-white/85">{{ __('Never send money or gift cards to someone you met online.') }}</p>
+                <a href="{{ route('legal.safety') }}" target="_blank" class="relative mt-2 inline-block text-xs font-semibold underline underline-offset-2">{{ __('Safety tips') }} →</a>
             </div>
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->displayName()" />
