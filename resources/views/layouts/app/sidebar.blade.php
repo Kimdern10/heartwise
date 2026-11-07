@@ -43,7 +43,26 @@
         @endif
 
         <flux:sidebar sticky collapsible="mobile" class="hw-sidebar glass border-e-0 overflow-y-auto overscroll-contain lg:m-3 lg:h-[calc(100svh-1.5rem)] lg:max-h-[calc(100svh-1.5rem)] lg:rounded-3xl lg:shadow-xl lg:shadow-brand-500/5">
-            <flux:sidebar.header>
+            {{-- Phones: who you are, at the top of the drawer --}}
+            <div class="flex items-center gap-3 border-b border-zinc-100 pb-4 lg:hidden dark:border-zinc-800" data-test="drawer-profile">
+                @if (! $isAdmin && auth()->user()->profile)
+                    <a href="{{ route('people.show', auth()->user()) }}" wire:navigate class="flex min-w-0 flex-1 items-center gap-3">
+                        <x-member-photo :user="auth()->user()" class="size-12 shrink-0 rounded-full" />
+                        <span class="min-w-0">
+                            <span class="block truncate font-bold">{{ auth()->user()->displayName() }}</span>
+                            <span class="block text-xs text-zinc-500">{{ __('View my profile') }}</span>
+                        </span>
+                    </a>
+                @else
+                    <div class="flex min-w-0 flex-1 items-center gap-3">
+                        <flux:avatar :name="auth()->user()->displayName()" :initials="auth()->user()->initials()" />
+                        <span class="truncate font-bold">{{ auth()->user()->displayName() }}</span>
+                    </div>
+                @endif
+                <flux:sidebar.collapse />
+            </div>
+
+            <flux:sidebar.header class="max-lg:hidden">
                 <x-app-logo :sidebar="true" href="{{ $home }}" wire:navigate />
                 @unless ($isAdmin)
                     <div class="ms-auto hidden lg:block"><livewire:notification-bell key="bell-desktop" /></div>
@@ -104,7 +123,27 @@
                 <a href="{{ route('legal.safety') }}" target="_blank" class="relative mt-2 inline-block text-xs font-semibold underline underline-offset-2">{{ __('Safety tips') }} →</a>
             </div>
 
-            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->displayName()" />
+            <div class="hidden lg:block">
+                <x-desktop-user-menu :name="auth()->user()->displayName()" />
+            </div>
+
+            {{-- Phones: settings and the one Log out button --}}
+            <div class="space-y-1 border-t border-zinc-100 pt-3 lg:hidden dark:border-zinc-800">
+                @unless ($isAdmin)
+                    <a href="{{ route('legal.safety') }}" target="_blank" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-500/10">
+                        <flux:icon.shield-check class="size-5" /> {{ __('Date safely: tips') }}
+                    </a>
+                @endunless
+                <a href="{{ route('profile.edit') }}" wire:navigate class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <flux:icon.cog-6-tooth class="size-5 text-zinc-500" /> {{ __('Settings') }}
+                </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10" data-test="drawer-logout">
+                        <flux:icon.arrow-right-start-on-rectangle class="size-5" /> {{ __('Log out') }}
+                    </button>
+                </form>
+            </div>
         </flux:sidebar>
 
         <!-- Mobile top bar -->
@@ -121,38 +160,6 @@
                 <livewire:notification-bell key="bell-mobile" />
             @endunless
 
-            <flux:dropdown position="top" align="end">
-                <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
-
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        <div class="p-0 text-sm font-normal">
-                            <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                                <flux:avatar :name="auth()->user()->displayName()" :initials="auth()->user()->initials()" />
-                                <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <flux:heading class="truncate">{{ auth()->user()->displayName() }}</flux:heading>
-                                    <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
-                                </div>
-                            </div>
-                        </div>
-                    </flux:menu.radio.group>
-
-                    <flux:menu.separator />
-
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
-                    </flux:menu.radio.group>
-
-                    <flux:menu.separator />
-
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full cursor-pointer" data-test="logout-button">
-                            {{ __('Log out') }}
-                        </flux:menu.item>
-                    </form>
-                </flux:menu>
-            </flux:dropdown>
         </flux:header>
 
         {{ $slot }}

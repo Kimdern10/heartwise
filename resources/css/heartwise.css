@@ -218,21 +218,28 @@
 .hw-swal-match .swal2-confirm { background: white !important; color: var(--color-brand-600) !important; }
 .hw-swal-match .swal2-cancel { background: rgb(255 255 255 / .18) !important; color: white !important; }
 
-/* Phone menu: a compact floating panel as tall as its links, not a full-height drawer
-   that runs under the bottom tab bar. (Overrides Flux's full-height mobile sidebar.) */
+/* Phone menu: a solid full-height drawer that slides in from the left over a dark
+   backdrop, above the top bar and bottom tab bar. (Overrides Flux's mobile sidebar.) */
 @layer utilities {
 @media (max-width: 1023.98px) {
     .hw-sidebar[data-flux-sidebar][data-flux-sidebar-on-mobile] {
-        top: 4.25rem !important;
-        inset-inline-start: .75rem !important;
-        bottom: auto !important;
-        height: auto !important;
-        min-height: 0 !important;
-        max-height: calc(100svh - 10.5rem) !important;
-        width: min(16rem, calc(100vw - 1.5rem));
-        border-radius: 1.5rem;
-        box-shadow: 0 25px 50px -12px rgb(0 0 0 / .25);
-        gap: .5rem;
+        top: 0 !important;
+        bottom: 0 !important;
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        max-height: 100dvh !important;
+        width: min(19rem, 86vw);
+        z-index: 60 !important;
+        background: #fff !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border-radius: 0 1.75rem 1.75rem 0;
+        box-shadow: 0 25px 60px -12px rgb(0 0 0 / .35);
+        padding: 1.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+        gap: .75rem;
     }
+    .dark .hw-sidebar[data-flux-sidebar][data-flux-sidebar-on-mobile] { background: var(--color-zinc-900) !important; }
+    .hw-sidebar[data-flux-sidebar][data-flux-sidebar-on-mobile] [data-flux-sidebar-item] { padding-block: .7rem; font-size: .95rem; }
+    [data-flux-sidebar-backdrop] { z-index: 55 !important; background: rgb(10 10 15 / .5) !important; backdrop-filter: blur(2px); }
 }
 }
