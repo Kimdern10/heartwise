@@ -256,6 +256,78 @@ window.addEventListener('live-alert', (event) => {
  * Swipe deck (Alpine): drag a card left to pass, right to like.
  * ------------------------------------------------------------- */
 document.addEventListener('alpine:init', () => {
+    /* Phone / desktop notifications (Web Push) on/off switch. */
+    window.Alpine.data('pushToggle', (publicKey) => ({
+        supported: 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!publicKey,
+        on: false,
+        busy: false,
+        blocked: false,
+
+        async init() {
+            if (!this.supported) return;
+            this.blocked = Notification.permission === 'denied';
+            const reg = await navigator.serviceWorker.ready;
+            this.on = !!(await reg.pushManager.getSubscription()) && Notification.permission === 'granted';
+        },
+
+        csrf() {
+            return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+        },
+
+        key() {
+            const pad = '='.repeat((4 - (publicKey.length % 4)) % 4);
+            const raw = atob((publicKey + pad).replace(/-/g, '+').replace(/_/g, '/'));
+            return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+        },
+
+        async enable() {
+            this.busy = true;
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    this.blocked = permission === 'denied';
+                    return window.hwToast?.('Notifications are blocked. You can allow them in your browser settings.', 'warning');
+                }
+                const reg = await navigator.serviceWorker.ready;
+                const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.key() }));
+                const json = sub.toJSON();
+                const encoding = (PushManager.supportedContentEncodings || ['aes128gcm'])[0];
+                const res = await fetch('/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': this.csrf() },
+                    body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys, contentEncoding: encoding }),
+                });
+                if (!res.ok) throw new Error('save failed');
+                this.on = true;
+                window.hwToast?.('Notifications are on. We will let you know about new messages, likes and matches.');
+            } catch (e) {
+                window.hwToast?.('Notifications could not be turned on on this device.', 'error');
+            } finally {
+                this.busy = false;
+            }
+        },
+
+        async disable() {
+            this.busy = true;
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) {
+                    await fetch('/push/unsubscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': this.csrf() },
+                        body: JSON.stringify({ endpoint: sub.endpoint }),
+                    });
+                    await sub.unsubscribe();
+                }
+                this.on = false;
+                window.hwToast?.('Notifications are off on this device.', 'info');
+            } finally {
+                this.busy = false;
+            }
+        },
+    }));
+
     /* Voice notes in chat: record up to 60 seconds, then upload and send. */
     window.Alpine.data('voiceRecorder', () => ({
         supported: !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder),

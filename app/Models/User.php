@@ -27,6 +27,7 @@ use Laravel\Cashier\Billable;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 /**
  * @property int $id
@@ -49,6 +50,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $email_code_hash
  * @property Carbon|null $email_code_expires_at
  * @property int $email_code_attempts
+ * @property Carbon|null $id_verified_at
+ * @property string|null $identity_session_id
  * @property AccountStatus $status
  * @property Carbon|null $suspended_until
  * @property string|null $status_reason
@@ -69,7 +72,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use Billable, HasFactory, HasPublicId, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use Billable, HasFactory, HasPublicId, HasPushSubscriptions, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -93,6 +96,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'email_code_expires_at' => 'datetime',
+            'id_verified_at' => 'datetime',
             'email_code_attempts' => 'integer',
             'password' => 'hashed',
             'date_of_birth' => 'date',
@@ -361,6 +365,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function isPhotoVerified(): bool
     {
         return $this->profile?->photo_verified_at !== null;
+    }
+
+    /** Passed a photo ID + live selfie check with Stripe Identity (and is 18+). */
+    public function isIdVerified(): bool
+    {
+        return $this->id_verified_at !== null;
     }
 
     public function primaryPhoto(): ?Photo

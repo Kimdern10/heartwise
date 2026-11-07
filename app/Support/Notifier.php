@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\UserMatch;
 use App\Notifications\MemberAlert;
 use App\Notifications\MemberAlertEmail;
+use App\Notifications\MemberAlertPush;
 use Throwable;
 
 /**
@@ -81,6 +82,15 @@ class Notifier
     private function send(User $to, MemberAlert $alert): void
     {
         $to->notify($alert);
+
+        // Phone/desktop notification for members who turned them on (queued, never slows anything).
+        if ($to->isActive() && $to->pushSubscriptions()->exists()) {
+            try {
+                $to->notify(new MemberAlertPush($alert->kind, $alert->title, $alert->body, $alert->url));
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
 
         if (! $alert->withEmail || ! $to->isActive()) {
             return;

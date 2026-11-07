@@ -137,6 +137,8 @@ new #[Title('Home')] class extends Component {
         @endforeach
     </div>
 
+    <x-push-toggle compact />
+
     {{-- Online now: people in my city active in the last 15 minutes (only those who show it) --}}
     @php($myProfile = Auth::user()->profile)
     @php($onlineNow = $myProfile ? \App\Support\Discovery::for(Auth::user(), ['state' => $myProfile->state, 'city' => $myProfile->city, 'online' => true])->limit(12)->get() : collect())

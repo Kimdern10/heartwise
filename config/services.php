@@ -54,6 +54,11 @@ return [
         'url' => env('GEOCODER_URL', 'https://nominatim.openstreetmap.org'),
     ],
 
+    // "ID verified" badge with Stripe Identity (Stripe charges about $1.50 per check). Off by default.
+    'identity' => [
+        'enabled' => env('IDENTITY_ENABLED', false),
+    ],
+
     'ip_intel' => [
         'driver' => env('IP_INTEL_DRIVER', 'proxycheck'),
         'proxycheck_key' => env('PROXYCHECK_KEY'),

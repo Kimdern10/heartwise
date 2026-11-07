@@ -92,6 +92,7 @@ new #[Title('Privacy settings')] class extends Component {
             <flux:separator variant="subtle" />
 
             <div class="space-y-4" id="notifications">
+                <x-push-toggle />
                 <flux:heading>{{ __('Email notifications') }}</flux:heading>
                 <flux:text class="text-sm">{{ __('Everything always appears under the bell icon. Choose what we also email you about.') }}</flux:text>
                 <flux:switch wire:model.live="emails.notify_matches" :label="__('New matches')" />

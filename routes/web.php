@@ -3,7 +3,9 @@
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DataExportController;
 use App\Http\Controllers\DatingAreaController;
+use App\Http\Controllers\IdentityController;
 use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SocialLoginController;
 use App\Http\Controllers\VoiceNoteController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +41,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('voice/{message}', VoiceNoteController::class)->name('voice.show');
 
+    Route::post('push/subscribe', [PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.subscribe');
+    Route::post('push/unsubscribe', [PushSubscriptionController::class, 'destroy'])->middleware('throttle:20,1')->name('push.unsubscribe');
+
     // Admins can open any member's profile to review it.
     Route::middleware('onboarded')->group(function () {
         Route::livewire('people/{user}', 'pages::people.show')->name('people.show');
@@ -53,6 +58,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
             Route::livewire('my-profile', 'pages::profile.edit')->name('my-profile.edit');
             Route::livewire('my-profile/verify', 'pages::profile.verify')->name('my-profile.verify');
+            Route::get('my-profile/verify/id', [IdentityController::class, 'start'])->name('my-profile.verify-id');
 
             Route::livewire('premium', 'pages::premium')->name('premium');
             Route::post('premium/checkout', [BillingController::class, 'checkout'])->name('premium.checkout');

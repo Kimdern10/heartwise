@@ -2,6 +2,7 @@
 
 use App\Enums\ModerationStatus;
 use App\Models\VerificationRequest;
+use App\Support\IdentityCheck;
 use App\Support\ImageProcessor;
 use Flux\Flux;
 use Illuminate\Support\Arr;
@@ -24,6 +25,19 @@ new #[Title('Get verified')] class extends Component {
     public function mount(): void
     {
         $this->gesture = Arr::random(config('dating.gestures'));
+
+        // Back from Stripe's ID check page.
+        if (request()->query('identity') === 'return' && IdentityCheck::enabled()) {
+            $result = IdentityCheck::refresh(Auth::user());
+
+            match ($result) {
+                'verified' => Flux::toast(variant: 'success', text: __('ID verified! Your profile now shows the ID badge.')),
+                'processing' => Flux::toast(text: __('Thanks! Stripe is checking your ID. This usually takes a minute or two.')),
+                'too_young' => Flux::toast(variant: 'danger', text: __('Heartwise is only for adults 18 and over.')),
+                'requires_input' => Flux::toast(variant: 'warning', text: __('The ID check was not finished. You can try again.')),
+                default => null,
+            };
+        }
     }
 
     #[Computed]
@@ -112,6 +126,25 @@ new #[Title('Get verified')] class extends Component {
 
                 <flux:button type="submit" variant="primary" data-test="submit-selfie">{{ __('Send for review') }}</flux:button>
             </form>
+        </flux:card>
+    @endif
+
+    {{-- ID + age check with Stripe Identity (only shown when switched on) --}}
+    @if (IdentityCheck::enabled())
+        <flux:card class="space-y-3" data-test="id-check">
+            <flux:heading size="lg" class="flex items-center gap-2">
+                <flux:icon.identification variant="solid" class="size-6 text-emerald-600" />
+                {{ __('ID verified badge') }}
+            </flux:heading>
+            @if (Auth::user()->isIdVerified())
+                <flux:callout icon="check-circle" color="green" :text="__('Your ID is verified. Your profile shows the green ID badge.')" />
+            @else
+                <flux:text>{{ __('Take a photo of your driver’s license, passport or state ID and a quick selfie. Our payment partner Stripe checks they match and that you are 18+. We never see or keep your ID — only that it passed.') }}</flux:text>
+                @if (session('status'))
+                    <flux:callout icon="information-circle" :text="session('status')" />
+                @endif
+                <flux:button variant="primary" icon="identification" :href="route('my-profile.verify-id')">{{ __('Verify my ID') }}</flux:button>
+            @endif
         </flux:card>
     @endif
 </section>

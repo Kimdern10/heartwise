@@ -4,7 +4,7 @@
  * always loaded fresh from the server (never cached), so nobody sees stale
  * or someone else's information.
  */
-const CACHE = 'heartwise-v1';
+const CACHE = 'heartwise-v2';
 const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', (event) => {
@@ -26,4 +26,42 @@ self.addEventListener('fetch', (event) => {
     if (request.mode === 'navigate') {
         event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
     }
+});
+
+/* Phone notifications (Web Push): show them, and open the right page when tapped. */
+self.addEventListener('push', (event) => {
+    let data = {};
+    try {
+        data = event.data ? event.data.json() : {};
+    } catch (e) {
+        data = { title: 'Heartwise', body: event.data ? event.data.text() : '' };
+    }
+
+    event.waitUntil(
+        self.registration.showNotification(data.title || 'Heartwise', {
+            body: data.body || '',
+            icon: data.icon || '/icons/icon-192.png',
+            badge: '/icons/icon-192.png',
+            tag: data.tag,
+            renotify: !!data.tag,
+            data: { url: (data.data && data.data.url) || '/dashboard' },
+        }),
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const url = (event.notification.data && event.notification.data.url) || '/dashboard';
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+            for (const client of windows) {
+                if ('focus' in client) {
+                    client.navigate(url);
+                    return client.focus();
+                }
+            }
+            return self.clients.openWindow(url);
+        }),
+    );
 });
