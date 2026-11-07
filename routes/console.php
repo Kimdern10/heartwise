@@ -17,3 +17,7 @@ Schedule::command('app:send-weekly-digest')->weeklyOn(1, '15:00')->timezone('Ame
 
 // Date check-ins: alert the trusted friend if a member hasn't checked in after their date.
 Schedule::command('app:check-date-safety')->everyFiveMinutes()->withoutOverlapping();
+
+// Queued emails (likes, matches, messages): send them every minute. Shared hosting has no
+// always-on worker, so the same cron job runs a short worker that stops when the queue is empty.
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')->everyMinute()->withoutOverlapping();

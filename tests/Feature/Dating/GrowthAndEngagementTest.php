@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserMatch;
 use App\Notifications\DateCheckinFriendMail;
 use App\Notifications\MemberAlert;
+use App\Notifications\MemberAlertEmail;
 use App\Notifications\WeeklyDigest;
 use App\Rules\NotDisposableEmail;
 use App\Support\ConnectionInspector;
@@ -36,7 +37,8 @@ test('a like puts an anonymous alert in the bell and emails at most every 6 hour
     app(LikeUser::class)->handle($a, $b);
     app(LikeUser::class)->handle($c, $b);
 
-    Notification::assertSentToTimes($b, MemberAlert::class, 3); // 2 bell + 1 email
+    Notification::assertSentToTimes($b, MemberAlert::class, 2);       // 2 bell alerts
+    Notification::assertSentToTimes($b, MemberAlertEmail::class, 1);  // 1 queued email
     Notification::assertSentTo($b, MemberAlert::class, fn ($n) => $n->kind === 'like' && ! str_contains($n->title, $a->displayName()));
     expect($b->fresh()->last_like_email_at)->not->toBeNull();
 });
@@ -60,11 +62,11 @@ test('message emails only go to people who are away, and are switchable', functi
     $b->forceFill(['last_active_at' => now()])->save();
     app(SendMessage::class)->handle($a, $match, 'Hi there!');
     Notification::assertSentTo($b, MemberAlert::class, fn ($n, $channels) => $channels === ['database']);
-    Notification::assertNotSentTo($b, MemberAlert::class, fn ($n, $channels) => $channels === ['mail']);
+    Notification::assertNotSentTo($b, MemberAlertEmail::class);
 
     $b->forceFill(['last_active_at' => now()->subHour()])->save();
     app(SendMessage::class)->handle($a, $match->fresh(), 'Are you there?');
-    Notification::assertSentTo($b, MemberAlert::class, fn ($n, $channels) => $channels === ['mail']);
+    Notification::assertSentTo($b, MemberAlertEmail::class, fn ($n, $channels) => $channels === ['mail']);
 });
 
 test('the bell shows notifications and marks them read', function () {

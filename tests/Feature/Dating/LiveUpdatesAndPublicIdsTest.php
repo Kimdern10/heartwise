@@ -4,6 +4,9 @@ use App\Actions\Dating\LikeUser;
 use App\Actions\Dating\SendMessage;
 use App\Models\User;
 use App\Models\UserMatch;
+use App\Notifications\MemberAlertEmail;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 
 test('page addresses use random codes, not database numbers', function () {
@@ -77,4 +80,32 @@ test('when someone unmatches, the other person’s open chat closes and old bell
 
     $this->actingAs($her)->get(route('messages.index'))->assertOk();
     $this->actingAs($her)->get(route('discover'))->assertOk()->assertDontSee($me->displayName());
+});
+
+test('the person whose like makes the match sees one celebration, not a second pop-up, and gets no email', function () {
+    Notification::fake();
+
+    $first = User::factory()->discoverable(['gender' => 'woman', 'seeking' => 'men'])->create();
+    $second = User::factory()->discoverable(['gender' => 'man', 'seeking' => 'women'])->create();
+
+    app(LikeUser::class)->handle($first, $second);
+    app(LikeUser::class)->handle($second, $first);   // this like makes the match
+
+    Notification::assertSentTo($first, MemberAlertEmail::class, fn ($n) => $n->kind === 'match');
+    Notification::assertNotSentTo($second, MemberAlertEmail::class, fn ($n) => $n->kind === 'match');
+    expect(new MemberAlertEmail('x', 'x', 'x', 'x'))->toBeInstanceOf(ShouldQueue::class);
+});
+
+test('the live checker does not pop up a match the member just made themselves', function () {
+    $first = User::factory()->discoverable(['gender' => 'woman', 'seeking' => 'men'])->create();
+    $second = User::factory()->discoverable(['gender' => 'man', 'seeking' => 'women'])->create();
+    app(LikeUser::class)->handle($first, $second);
+
+    $pulse = Livewire::actingAs($second)->test('live-pulse');
+    $this->travel(2)->seconds();
+
+    app(LikeUser::class)->handle($second, $first);   // match made by $second, celebrated on screen
+
+    $pulse->call('check')->assertNotDispatched('live-alert');
+    expect($second->notifications()->where('data->kind', 'match')->count())->toBe(1);   // still in the bell history
 });

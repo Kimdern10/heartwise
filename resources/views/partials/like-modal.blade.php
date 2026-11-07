@@ -34,7 +34,7 @@
             <flux:modal.close>
                 <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
             </flux:modal.close>
-            <flux:button type="submit" variant="primary" icon="heart" class="flex-1" data-test="send-like">{{ __('Send like') }}</flux:button>
+            <flux:button type="submit" variant="primary" icon="heart" class="flex-1" data-test="send-like" wire:loading.attr="disabled" wire:target="sendLike">{{ __('Send like') }}</flux:button>
         </div>
     </form>
 </flux:modal>

@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\User;
 use App\Models\UserMatch;
 use App\Notifications\MemberAlert;
+use App\Notifications\MemberAlertEmail;
 use Throwable;
 
 /**
@@ -16,15 +17,23 @@ use Throwable;
  */
 class Notifier
 {
-    public function match(User $to, User $other, UserMatch $match): void
+    /**
+     * @param  bool  $alreadyShown  true for the person whose like just made the match: they saw the
+     *                              celebration on screen, so the bell entry is marked read and no email is sent
+     */
+    public function match(User $to, User $other, UserMatch $match, bool $alreadyShown = false): void
     {
         $this->send($to, new MemberAlert(
             'match',
             __('It’s a match with :name! 🎉', ['name' => $other->displayName()]),
             __('You and :name liked each other. Say hello!', ['name' => $other->displayName()]),
             route('messages.show', $match),
-            $to->notify_matches,
+            $to->notify_matches && ! $alreadyShown,
         ));
+
+        if ($alreadyShown) {
+            $to->unreadNotifications()->where('data->url', route('messages.show', $match))->update(['read_at' => now()]);
+        }
     }
 
     public function like(User $to, bool $spark = false): void
@@ -78,9 +87,8 @@ class Notifier
         }
 
         try {
-            $email = clone $alert;
-            $email->channels = ['mail'];
-            $to->notify($email);
+            // Queued, so a slow mail server never makes the like or message wait.
+            $to->notify(new MemberAlertEmail($alert->kind, $alert->title, $alert->body, $alert->url, true, ['mail']));
         } catch (Throwable $e) {
             // A mail problem must never stop a like or a message going through.
             report($e);

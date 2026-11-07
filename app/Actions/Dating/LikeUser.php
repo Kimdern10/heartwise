@@ -98,7 +98,7 @@ class LikeUser
         if ($liked && ! $alreadyLiked) {
             if ($match?->wasRecentlyCreated) {
                 $this->notifier->match($target, $user, $match);
-                $this->notifier->match($user, $target, $match);
+                $this->notifier->match($user, $target, $match, alreadyShown: true);
             } elseif (! $match) {
                 $this->notifier->like($target, $spark);
             }
