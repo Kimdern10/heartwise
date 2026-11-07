@@ -208,9 +208,10 @@ new class extends Component {
 @php($isPremium = Auth::user()->isPremium())
 @php($online = $other->profile?->show_last_active && $other->last_active_at?->gt(now()->subMinutes(15)))
 
-<section class="mx-auto flex h-[calc(100svh-12rem)] w-full max-w-3xl flex-col lg:h-[calc(100svh-4rem)]">
+{{-- On phones the chat covers the whole screen (like a messaging app); the back arrow leaves it. --}}
+<section class="mx-auto flex w-full max-w-3xl flex-col max-lg:fixed max-lg:inset-0 max-lg:z-50 max-lg:h-[100dvh] max-lg:max-w-none max-lg:bg-white lg:h-[calc(100svh-4rem)] dark:max-lg:bg-zinc-950" data-test="chat-screen">
     {{-- Messages appear the moment you press send; the server saves them in the background. --}}
-    <div class="hw-card flex h-full flex-col overflow-hidden"
+    <div class="hw-card flex h-full flex-col overflow-hidden max-lg:!rounded-none max-lg:!border-0 max-lg:!shadow-none"
         x-data="{
             draft: '',
             pending: [],

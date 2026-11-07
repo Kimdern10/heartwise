@@ -217,3 +217,22 @@
 .hw-swal-match .swal2-html-container { color: white !important; }
 .hw-swal-match .swal2-confirm { background: white !important; color: var(--color-brand-600) !important; }
 .hw-swal-match .swal2-cancel { background: rgb(255 255 255 / .18) !important; color: white !important; }
+
+/* Phone menu: a compact floating panel as tall as its links, not a full-height drawer
+   that runs under the bottom tab bar. (Overrides Flux's full-height mobile sidebar.) */
+@layer utilities {
+@media (max-width: 1023.98px) {
+    .hw-sidebar[data-flux-sidebar][data-flux-sidebar-on-mobile] {
+        top: 4.25rem !important;
+        inset-inline-start: .75rem !important;
+        bottom: auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: calc(100svh - 10.5rem) !important;
+        width: min(16rem, calc(100vw - 1.5rem));
+        border-radius: 1.5rem;
+        box-shadow: 0 25px 50px -12px rgb(0 0 0 / .25);
+        gap: .5rem;
+    }
+}
+}

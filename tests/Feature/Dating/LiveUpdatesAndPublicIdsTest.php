@@ -109,3 +109,18 @@ test('the live checker does not pop up a match the member just made themselves',
     $pulse->call('check')->assertNotDispatched('live-alert');
     expect($second->notifications()->where('data->kind', 'match')->count())->toBe(1);   // still in the bell history
 });
+
+test('members can clear all their notifications from the bell', function () {
+    $me = User::factory()->discoverable(['gender' => 'woman', 'seeking' => 'men'])->create();
+    $fan = User::factory()->discoverable(['gender' => 'man', 'seeking' => 'women'])->create();
+    app(LikeUser::class)->handle($fan, $me);
+
+    expect($me->notifications()->count())->toBe(1);
+
+    Livewire::actingAs($me)->test('notification-bell')
+        ->assertSee('Clear all')
+        ->call('clearAll')
+        ->assertDontSee('Someone new likes you');
+
+    expect($me->notifications()->count())->toBe(0);
+});

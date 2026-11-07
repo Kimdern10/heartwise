@@ -25,6 +25,12 @@ new class extends Component {
         unset($this->items, $this->unread);
     }
 
+    public function clearAll(): void
+    {
+        Auth::user()->notifications()->delete();
+        unset($this->items, $this->unread);
+    }
+
     public function markAllRead(): void
     {
         Auth::user()->unreadNotifications->markAsRead();
@@ -56,9 +62,16 @@ new class extends Component {
         class="z-[60] w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-900 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 dark:text-white">
         <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
             <p class="font-semibold">{{ __('Notifications') }}</p>
-            @if ($this->unread)
-                <button type="button" wire:click="markAllRead" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white">{{ __('Mark all read') }}</button>
-            @endif
+            <div class="flex items-center gap-3">
+                @if ($this->unread)
+                    <button type="button" wire:click="markAllRead" class="text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white">{{ __('Mark all read') }}</button>
+                @endif
+                @if ($this->items->isNotEmpty())
+                    <button type="button" wire:click="clearAll" data-test="clear-notifications"
+                        data-confirm="{{ __('Clear all notifications?') }}"
+                        class="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400">{{ __('Clear all') }}</button>
+                @endif
+            </div>
         </div>
         <div class="max-h-96 divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800">
             @forelse ($this->items as $n)
