@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\Concerns\ModeratesMembers;
+use App\Livewire\Base\ModerationComponent;
 use App\Models\ConnectionCheck;
 use App\Models\Setting;
 use Flux\Flux;
@@ -12,8 +12,8 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('Connection security')] class extends Component {
-    use ModeratesMembers, WithPagination;
+new #[Title('Connection security')] class extends ModerationComponent {
+    use WithPagination;
 
     public string $vpnPolicy = 'flag';
     public bool $usOnly = false;

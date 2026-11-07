@@ -1,5 +1,7 @@
+import Swal from 'sweetalert2';
+
 /*
- * Heartwise front-end extras: in-page confirm dialogs, scroll reveal,
+ * Heartwise front-end extras: SweetAlert pop-ups, scroll reveal,
  * the swipe deck, and the "It's a match" celebration.
  */
 
@@ -40,44 +42,52 @@ document.addEventListener('click', async (event) => {
 });
 
 /* ---------------------------------------------------------------
- * Confirm dialog
- * Add data-confirm="Question?" to any button that has wire:click.
- * Works everywhere (the browser's own confirm() popup is blocked in
- * some browsers and in-app web views, so we never rely on it).
+ * SweetAlert2: every pop-up on the site (confirms, toasts, matches,
+ * live alerts) uses the same look.
+ * ------------------------------------------------------------- */
+const brand = '#e11d5a';
+const dark = () => document.documentElement.classList.contains('dark');
+
+const swal = (options) =>
+    Swal.fire({
+        confirmButtonColor: brand,
+        cancelButtonColor: '#71717a',
+        background: dark() ? '#18181b' : '#fff',
+        color: dark() ? '#fafafa' : '#18181b',
+        ...options,
+    });
+
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 4000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer);
+        toast.addEventListener('mouseleave', Swal.resumeTimer);
+    },
+});
+
+window.Swal = Swal;
+window.hwToast = (text, icon = 'success', options = {}) =>
+    Toast.fire({ icon, title: text, background: dark() ? '#27272a' : '#fff', color: dark() ? '#fafafa' : '#18181b', ...options });
+
+/* Server toasts (Flux::toast in PHP) are shown as SweetAlert toasts. */
+window.addEventListener('toast-show', (event) => {
+    const d = Array.isArray(event.detail) ? event.detail[0] : event.detail;
+    const variant = d?.dataset?.variant;
+    const icon = { success: 'success', warning: 'warning', danger: 'error' }[variant] ?? 'info';
+    const text = d?.slots?.text ?? '';
+    const heading = d?.slots?.heading;
+    window.hwToast(heading ? `${heading}: ${text}` : text, icon, { timer: d?.duration > 0 ? d.duration : 4000 });
+});
+
+/* ---------------------------------------------------------------
+ * Confirm dialog: add data-confirm="Question?" to any button that has
+ * wire:click (data-confirm-danger makes the button red).
  * ------------------------------------------------------------- */
 let confirmed = null;
-
-function openConfirm(message, danger, onYes) {
-    const wrap = document.createElement('div');
-    wrap.className = 'hw-confirm';
-    wrap.innerHTML = `
-        <div class="hw-confirm__backdrop"></div>
-        <div class="hw-confirm__panel" role="alertdialog" aria-modal="true">
-            <p class="hw-confirm__text"></p>
-            <div class="hw-confirm__actions">
-                <button type="button" class="hw-btn hw-btn--ghost" data-no>Cancel</button>
-                <button type="button" class="hw-btn ${danger ? 'hw-btn--danger' : 'hw-btn--primary'}" data-yes>Yes, continue</button>
-            </div>
-        </div>`;
-    wrap.querySelector('.hw-confirm__text').textContent = message;
-
-    const close = () => {
-        wrap.classList.add('is-leaving');
-        setTimeout(() => wrap.remove(), 180);
-        document.removeEventListener('keydown', onKey);
-    };
-    const onKey = (e) => e.key === 'Escape' && close();
-
-    wrap.querySelector('[data-no]').addEventListener('click', close);
-    wrap.querySelector('.hw-confirm__backdrop').addEventListener('click', close);
-    wrap.querySelector('[data-yes]').addEventListener('click', () => {
-        close();
-        onYes();
-    });
-    document.addEventListener('keydown', onKey);
-    document.body.appendChild(wrap);
-    wrap.querySelector('[data-yes]').focus();
-}
 
 document.addEventListener(
     'click',
@@ -91,7 +101,18 @@ document.addEventListener(
         event.preventDefault();
         event.stopImmediatePropagation();
 
-        openConfirm(el.dataset.confirm, el.hasAttribute('data-confirm-danger'), () => {
+        const danger = el.hasAttribute('data-confirm-danger');
+        swal({
+            title: el.dataset.confirm,
+            icon: danger ? 'warning' : 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, continue',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: danger ? '#dc2626' : brand,
+            reverseButtons: true,
+            focusCancel: danger,
+        }).then((result) => {
+            if (!result.isConfirmed) return;
             confirmed = el;
             el.click();
         });
@@ -153,40 +174,82 @@ document.addEventListener('livewire:navigated', initReveal);
  * ------------------------------------------------------------- */
 window.addEventListener('matched', (event) => {
     const detail = Array.isArray(event.detail) ? event.detail[0] : event.detail;
-    const wrap = document.createElement('div');
-    wrap.className = 'hw-match';
-    wrap.innerHTML = `
-        <div class="hw-match__backdrop"></div>
-        <div class="hw-match__panel">
-            <div class="hw-match__hearts" aria-hidden="true"></div>
+    const hearts = Array.from({ length: 18 }, () =>
+        `<span style="left:${Math.random() * 100}%;animation-delay:${Math.random() * 0.6}s;font-size:${12 + Math.random() * 18}px">❤</span>`,
+    ).join('');
+
+    swal({
+        html: `<div class="hw-match__hearts" aria-hidden="true">${hearts}</div>
             <p class="hw-match__eyebrow">It's a match!</p>
             <h2 class="hw-match__title"></h2>
-            <p class="hw-match__text">You both liked each other. Say hello — and remember, never send money to someone you met online.</p>
-            <div class="hw-match__actions">
-                <button type="button" class="hw-btn hw-btn--ghost" data-close>Keep swiping</button>
-                <a class="hw-btn hw-btn--primary" data-chat>Send a message</a>
-            </div>
-        </div>`;
-    wrap.querySelector('.hw-match__title').textContent = `You and ${detail?.name ?? 'your match'}`;
-    wrap.querySelector('[data-chat]').href = detail?.url ?? '/messages';
+            <p class="hw-match__text">You both liked each other. Say hello — and remember, never send money to someone you met online.</p>`,
+        showCancelButton: true,
+        confirmButtonText: 'Send a message',
+        cancelButtonText: 'Keep going',
+        reverseButtons: true,
+        customClass: { popup: 'hw-swal-match' },
+        didOpen: (popup) => {
+            popup.querySelector('.hw-match__title').textContent = `You and ${detail?.name ?? 'your match'}`;
+        },
+    }).then((result) => {
+        if (result.isConfirmed) window.Livewire?.navigate ? Livewire.navigate(detail?.url ?? '/messages') : (location.href = detail?.url ?? '/messages');
+    });
+});
 
-    const hearts = wrap.querySelector('.hw-match__hearts');
-    for (let i = 0; i < 18; i++) {
-        const h = document.createElement('span');
-        h.textContent = '❤';
-        h.style.left = `${Math.random() * 100}%`;
-        h.style.animationDelay = `${Math.random() * 0.6}s`;
-        h.style.fontSize = `${12 + Math.random() * 18}px`;
-        hearts.appendChild(h);
+/* ---------------------------------------------------------------
+ * Live updates (from the live-pulse component every few seconds):
+ * badges change and new messages, likes and matches pop up — no refresh.
+ * ------------------------------------------------------------- */
+const go = (url) => (window.Livewire?.navigate ? Livewire.navigate(url) : (location.href = url));
+
+window.addEventListener('live-counts', (event) => {
+    const counts = Array.isArray(event.detail) ? event.detail[0] : event.detail;
+    document.querySelectorAll('[data-live-badge]').forEach((badge) => {
+        const value = Number(counts?.[badge.dataset.liveBadge] ?? 0);
+        badge.textContent = value > 99 ? '99+' : String(value);
+        badge.classList.toggle('hidden', value === 0);
+    });
+});
+
+window.addEventListener('live-alert', (event) => {
+    const alert = Array.isArray(event.detail) ? event.detail[0] : event.detail;
+    if (!alert) return;
+
+    // Already looking at that chat? The message shows there by itself.
+    let path = '';
+    try {
+        path = new URL(alert.url, location.origin).pathname;
+    } catch (e) {}
+    if (alert.kind === 'message' && path === location.pathname) return;
+
+    if (alert.kind === 'match') {
+        swal({
+            title: alert.title,
+            text: alert.body,
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonText: 'Say hello',
+            cancelButtonText: 'Later',
+            reverseButtons: true,
+            customClass: { popup: 'hw-swal-match' },
+        }).then((result) => result.isConfirmed && go(alert.url));
+        return;
     }
 
-    const close = () => {
-        wrap.classList.add('is-leaving');
-        setTimeout(() => wrap.remove(), 220);
-    };
-    wrap.querySelector('[data-close]').addEventListener('click', close);
-    wrap.querySelector('.hw-match__backdrop').addEventListener('click', close);
-    document.body.appendChild(wrap);
+    window
+        .hwToast(alert.title, alert.kind === 'message' ? 'info' : 'success', {
+            text: alert.body,
+            timer: 7000,
+            didOpen: (toast) => {
+                toast.style.cursor = 'pointer';
+                toast.addEventListener('click', () => {
+                    Swal.close();
+                    go(alert.url);
+                });
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            },
+        });
 });
 
 /* ---------------------------------------------------------------

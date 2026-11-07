@@ -31,7 +31,7 @@ class ConnectionInspector
     {
         $browserTimezone = $this->cleanTimezone($browserTimezone);
         // Settings changes bump policy_version, so new rules apply straight away.
-        $key = 'conn:'.Setting::get('policy_version').'|'.$ip.'|'.$browserTimezone.'|'.$deviceId.'|'.($user?->id ?? 'guest');
+        $key = 'conn:'.Setting::get('policy_version').'|'.$ip.'|'.$browserTimezone.'|'.$deviceId.'|'.($user->id ?? 'guest');
 
         return Cache::remember($key, now()->addHours(6), function () use ($ip, $browserTimezone, $user, $deviceId) {
             $info = $this->lookup($ip);

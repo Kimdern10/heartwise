@@ -73,11 +73,7 @@
 
         {{ $slot }}
 
-        @persist('toast')
-            <flux:toast.group>
-                <flux:toast />
-            </flux:toast.group>
-        @endpersist
+        {{-- Toasts are shown with SweetAlert (resources/js/app.js). --}}
 
         @fluxScripts
     </body>

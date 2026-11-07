@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -48,7 +49,7 @@ class DatingAreaController extends Controller
             'stateName' => config('dating.us_states.'.$code),
             'city' => null,
             'members' => $this->memberCount($code),
-            'cities' => collect(config('us_cities'))->filter(fn ($c) => $c[1] === $code),
+            'cities' => collect(Config::array('us_cities'))->filter(fn ($c) => $c[1] === $code),
         ]);
     }
 
@@ -64,7 +65,7 @@ class DatingAreaController extends Controller
             'stateName' => config('dating.us_states.'.$code),
             'city' => $entry[0],
             'members' => $this->memberCount($code),
-            'cities' => collect(config('us_cities'))->filter(fn ($c, $slug) => $c[1] === $code && $slug !== $city),
+            'cities' => collect(Config::array('us_cities'))->filter(fn ($c, $slug) => $c[1] === $code && $slug !== $city),
         ]);
     }
 
@@ -73,7 +74,7 @@ class DatingAreaController extends Controller
         $urls = [route('home'), route('register'), route('areas.index'), route('legal.safety'), route('legal.guidelines'), route('legal.terms'), route('legal.privacy')];
 
         foreach (array_keys(config('dating.us_states')) as $code) {
-            $urls[] = route('areas.state', self::stateSlug($code));
+            $urls[] = route('areas.state', self::stateSlug((string) $code));
         }
 
         foreach (config('us_cities') as $slug => [, $code]) {

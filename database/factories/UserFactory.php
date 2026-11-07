@@ -71,6 +71,8 @@ class UserFactory extends Factory
 
     /**
      * A member with an approved profile and one approved photo, so others can find them.
+     *
+     * @param  array<string, mixed>  $profile
      */
     public function discoverable(array $profile = []): static
     {

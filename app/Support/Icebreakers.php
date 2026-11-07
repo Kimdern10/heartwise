@@ -25,7 +25,7 @@ class Icebreakers
             $ideas[] = __($templates[$i % 2], ['prompt' => $prompt->prompt]);
         }
 
-        $shared = array_values(array_intersect($me->profile?->interests ?? [], $them->profile?->interests ?? []));
+        $shared = array_values(array_intersect($me->profile->interests ?? [], $them->profile->interests ?? []));
         if ($shared) {
             $ideas[] = __('I see we’re both into :thing — what got you into it?', ['thing' => strtolower($shared[0])]);
         } elseif ($them->profile?->city) {

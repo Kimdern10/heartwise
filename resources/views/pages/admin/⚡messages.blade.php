@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\Concerns\ModeratesMembers;
+use App\Livewire\Base\ModerationComponent;
 use App\Models\Message;
 use App\Support\MessageScreener;
 use Livewire\Attributes\Computed;
@@ -8,8 +8,8 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('Flagged messages')] class extends Component {
-    use ModeratesMembers, WithPagination;
+new #[Title('Flagged messages')] class extends ModerationComponent {
+    use WithPagination;
 
     #[Computed]
     public function messages()

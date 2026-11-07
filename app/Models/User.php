@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AccountStatus;
 use App\Enums\ModerationStatus;
 use App\Enums\Role;
+use App\Models\Concerns\HasPublicId;
 use App\Notifications\EmailVerificationCode;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
@@ -44,6 +45,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $last_boost_at
  * @property bool $is_admin
  * @property Role $role
+ * @property string $public_id
+ * @property string|null $email_code_hash
+ * @property Carbon|null $email_code_expires_at
+ * @property int $email_code_attempts
  * @property AccountStatus $status
  * @property Carbon|null $suspended_until
  * @property string|null $status_reason
@@ -64,7 +69,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use Billable, HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use Billable, HasFactory, HasPublicId, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -370,10 +375,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function blockedUserIds(): array
     {
-        return Block::query()
+        return array_values(Block::query()
             ->where('user_id', $this->id)->pluck('blocked_id')
             ->merge(Block::query()->where('blocked_id', $this->id)->pluck('user_id'))
-            ->unique()->values()->all();
+            ->map(fn ($id) => (int) $id)
+            ->unique()->all());
     }
 
     public function hasBlockBetween(User $other): bool

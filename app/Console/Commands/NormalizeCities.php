@@ -25,6 +25,7 @@ class NormalizeCities extends Command
             ->whereNotNull('city')->where('city', '!=', '')
             ->select('state', DB::raw('MIN(city) as city'), DB::raw('COUNT(*) as members'))
             ->groupBy('state', DB::raw('LOWER(TRIM(city))'))
+            ->toBase()
             ->get();
 
         $changed = 0;

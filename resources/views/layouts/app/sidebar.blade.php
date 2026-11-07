@@ -38,6 +38,8 @@
                 ['my-profile.edit', 'my-profile.*,preferences', 'user-circle', __('Profile')],
             ])
             @php($badges = ['messages.index' => $unread, 'activity' => $pendingLikes])
+            {{-- Badge names the live checker (live-pulse) updates without a page refresh --}}
+            @php($liveKeys = ['messages.index' => 'messages', 'activity' => 'likes'])
         @endif
 
         <flux:sidebar sticky collapsible="mobile" class="glass border-e-0 overflow-y-auto overscroll-contain lg:m-3 lg:h-[calc(100svh-1.5rem)] lg:max-h-[calc(100svh-1.5rem)] lg:rounded-3xl lg:shadow-xl lg:shadow-brand-500/5">
@@ -69,7 +71,9 @@
                         <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Home') }}</flux:sidebar.item>
                         @foreach ($nav as [$route, $active, $icon, $label])
                             <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs(...explode(',', $active))"
-                                :badge="($badges[$route] ?? 0) ?: null" wire:navigate>
+                                :badge="isset($liveKeys[$route]) ? (string) ($badges[$route] ?? 0) : null"
+                                :badge:data-live-badge="$liveKeys[$route] ?? null"
+                                :badge:class="($badges[$route] ?? 0) ? '' : 'hidden'" wire:navigate>
                                 {{ $label }}
                             </flux:sidebar.item>
                             @if ($route === 'discover')
@@ -161,18 +165,20 @@
                     class="relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition {{ $isActive ? 'text-brand-600 dark:text-brand-400' : 'text-zinc-500' }}">
                     <flux:icon :name="$icon" :variant="$isActive ? 'solid' : 'outline'" class="size-6 transition {{ $isActive ? 'scale-110' : '' }}" />
                     {{ $label }}
-                    @if ($badges[$route] ?? 0)
-                        <span class="bg-brand-gradient absolute end-[22%] top-0.5 flex size-4 items-center justify-center rounded-full text-[10px] text-white">{{ $badges[$route] }}</span>
-                    @endif
+                    @isset($liveKeys[$route])
+                        <span data-live-badge="{{ $liveKeys[$route] }}" class="bg-brand-gradient absolute end-[22%] top-0.5 flex size-4 items-center justify-center rounded-full text-[10px] text-white {{ ($badges[$route] ?? 0) ? '' : 'hidden' }}">{{ $badges[$route] ?? 0 }}</span>
+                    @endisset
                 </a>
             @endforeach
         </nav>
 
-        @persist('toast')
-            <flux:toast.group>
-                <flux:toast />
-            </flux:toast.group>
-        @endpersist
+        {{-- Toasts are shown with SweetAlert (resources/js/app.js). --}}
+        @unless ($isAdmin)
+            {{-- New messages, likes and matches pop up and update the badges without a refresh. --}}
+            @persist('live-pulse')
+                <livewire:live-pulse />
+            @endpersist
+        @endunless
 
         @fluxScripts
     </body>

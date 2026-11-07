@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
+use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse;
 use Throwable;
 
 /**
@@ -24,13 +26,13 @@ class SocialLoginController extends Controller
             && (filled(config("services.$provider.client_secret")) || filled(config("services.$provider.private_key")));
     }
 
-    public function redirect(string $provider): RedirectResponse
+    public function redirect(string $provider): SymfonyRedirectResponse
     {
         abort_unless(self::enabled($provider), 404);
 
         $driver = Socialite::driver($provider);
 
-        if ($provider === 'apple') {
+        if ($provider === 'apple' && $driver instanceof AbstractProvider) {
             $driver->scopes(['name', 'email']);
         }
 

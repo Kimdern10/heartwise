@@ -45,7 +45,7 @@ class SendWeeklyDigest extends Command
                     try {
                         $member->notify(new WeeklyDigest(
                             $new->count(),
-                            $new->take(3)->map->displayName()->all(),
+                            array_values($new->take(3)->map->displayName()->all()),
                             config('dating.us_states.'.$member->profile->state),
                             $likes,
                         ));

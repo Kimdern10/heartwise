@@ -46,7 +46,7 @@ class BillingController extends Controller
                 'success_url' => route('premium', ['welcome' => 1]),
                 'cancel_url' => route('premium'),
                 'customer_update' => ['address' => 'auto'],
-            ]);
+            ])->redirect();
     }
 
     /**

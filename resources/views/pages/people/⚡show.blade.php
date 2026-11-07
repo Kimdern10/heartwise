@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\Concerns\LikesProfiles;
+use App\Livewire\Base\ProfileLikingComponent;
 use App\Models\Favorite;
 use App\Models\Like;
 use App\Models\ProfileView;
@@ -12,8 +12,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
-new class extends Component {
-    use LikesProfiles;
+new class extends ProfileLikingComponent {
 
     #[Locked]
     public int $personId;

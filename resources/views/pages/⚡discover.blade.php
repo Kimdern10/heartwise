@@ -2,7 +2,7 @@
 
 use App\Actions\Dating\LikeUser;
 use App\Exceptions\DatingActionException;
-use App\Livewire\Concerns\LikesProfiles;
+use App\Livewire\Base\ProfileLikingComponent;
 use App\Models\Like;
 use App\Models\ProfileView;
 use App\Models\User;
@@ -16,8 +16,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-new #[Title('Discover')] class extends Component {
-    use LikesProfiles;
+new #[Title('Discover')] class extends ProfileLikingComponent {
 
     #[Url]
     public string $view = 'feed';

@@ -154,7 +154,7 @@ class Discovery
     /**
      * @param  Builder<User>  $query
      */
-    private static function applyDealbreakers(Builder $query, $profile): void
+    private static function applyDealbreakers(Builder $query, Profile $profile): void
     {
         if ($profile->hasDealbreaker('age') && $profile->pref_age_min && $profile->pref_age_max) {
             $query->where('date_of_birth', '<=', now()->subYears($profile->pref_age_min)->toDateString())

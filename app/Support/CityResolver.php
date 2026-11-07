@@ -122,7 +122,7 @@ class CityResolver
     /**
      * @param  array<string, mixed>  $address
      */
-    private static function cityFrom(array $address, string $state): ?string
+    protected static function cityFrom(array $address, string $state): ?string
     {
         if (($address['ISO3166-2-lvl4'] ?? null) !== 'US-'.$state) {
             return null;
@@ -138,7 +138,7 @@ class CityResolver
      * @param  array<string, mixed>  $query
      * @return array<mixed>|null null when the service could not be reached
      */
-    private static function request(string $endpoint, array $query): ?array
+    protected static function request(string $endpoint, array $query): ?array
     {
         try {
             $response = Http::baseUrl(rtrim((string) config('services.geocoder.url'), '/'))

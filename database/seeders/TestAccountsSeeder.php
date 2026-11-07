@@ -95,10 +95,7 @@ class TestAccountsSeeder extends Seeder
 
         static::removeAll();
 
-        $users = [];
-        foreach (self::PEOPLE as $n => $person) {
-            $users[$n] = $this->createPerson($n, ...$person);
-        }
+        $users = collect(self::PEOPLE)->map(fn (array $person, int $n) => $this->createPerson($n, ...$person))->all();
 
         $this->subscribePremium($users[2]);
         $this->subscribePremium($users[15]);
@@ -119,6 +116,9 @@ class TestAccountsSeeder extends Seeder
         return $users->count();
     }
 
+    /**
+     * @param  array{0: float, 1: float}  $coords
+     */
     private function createPerson(int $n, string $name, string $gender, int $age, RelationshipGoal $goal, string $job, array $coords, string $city, string $state = 'TX'): User
     {
         $isMan = $gender === 'man';
@@ -282,37 +282,45 @@ class TestAccountsSeeder extends Seeder
      */
     private function placeholderPhoto(int $userId, string $name, int $seed): array
     {
+        return [
+            'path' => $this->placeholderImage($userId, $name, $seed, 900, 1125, ''),
+            'path_sm' => $this->placeholderImage($userId, $name, $seed, 400, 500, '-sm'),
+        ];
+    }
+
+    private function placeholderImage(int $userId, string $name, int $seed, int $w, int $h, string $suffix): string
+    {
         $palettes = [[244, 63, 94], [14, 165, 233], [234, 179, 8], [34, 197, 94], [168, 85, 247], [249, 115, 22], [20, 184, 166]];
         $rgb = $palettes[$seed % count($palettes)];
-        $paths = [];
+        $image = imagecreatetruecolor(max(1, $w), max(1, $h));
 
-        foreach (['path' => [900, 1125], 'path_sm' => [400, 500]] as $key => [$w, $h]) {
-            $image = imagecreatetruecolor($w, $h);
+        for ($y = 0; $y < $h; $y++) {
+            $t = $y / $h;
+            $color = imagecolorallocate($image,
+                max(0, min(255, (int) ($rgb[0] + (30 - $rgb[0]) * $t * 0.8))),
+                max(0, min(255, (int) ($rgb[1] + (20 - $rgb[1]) * $t * 0.8))),
+                max(0, min(255, (int) ($rgb[2] + (60 - $rgb[2]) * $t * 0.8))));
 
-            for ($y = 0; $y < $h; $y++) {
-                $t = $y / $h;
-                $color = imagecolorallocate($image,
-                    (int) ($rgb[0] + (30 - $rgb[0]) * $t * 0.8),
-                    (int) ($rgb[1] + (20 - $rgb[1]) * $t * 0.8),
-                    (int) ($rgb[2] + (60 - $rgb[2]) * $t * 0.8));
+            if ($color !== false) {
                 imageline($image, 0, $y, $w, $y, $color);
             }
-
-            $white = imagecolorallocate($image, 255, 255, 255);
-            $label = strtoupper($name).' - TEST';
-            $font = 5;
-            imagestring($image, $font, (int) (($w - imagefontwidth($font) * strlen($label)) / 2), (int) ($h / 2) - 8, $label, $white);
-
-            ob_start();
-            imagewebp($image, null, 82);
-            $path = "photos/{$userId}/test-".Str::random(10).($key === 'path_sm' ? '-sm' : '').'.webp';
-            Storage::disk('local')->put($path, (string) ob_get_clean());
-            imagedestroy($image);
-
-            $paths[$key] = $path;
         }
 
-        return $paths;
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $label = strtoupper($name).' - TEST';
+        $font = 5;
+
+        if ($white !== false) {
+            imagestring($image, $font, (int) (($w - imagefontwidth($font) * strlen($label)) / 2), (int) ($h / 2) - 8, $label, $white);
+        }
+
+        ob_start();
+        imagewebp($image, null, 82);
+        $path = "photos/{$userId}/test-".Str::random(10).$suffix.'.webp';
+        Storage::disk('local')->put($path, (string) ob_get_clean());
+        imagedestroy($image);
+
+        return $path;
     }
 
     private function app(): string

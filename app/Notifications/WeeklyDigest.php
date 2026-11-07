@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -27,7 +28,7 @@ class WeeklyDigest extends Notification
     {
         $mail = (new MailMessage)
             ->subject(trans_choice(':count new person joined near you this week|:count new people joined near you this week', $this->newPeople))
-            ->greeting(__('Hi :name,', ['name' => $notifiable->displayName()]))
+            ->greeting($notifiable instanceof User ? __('Hi :name,', ['name' => $notifiable->displayName()]) : __('Hi,'))
             ->line(trans_choice(':count new member in :state joined :app this week.|:count new members in :state joined :app this week.', $this->newPeople, [
                 'state' => $this->state,
                 'app' => config('app.name'),

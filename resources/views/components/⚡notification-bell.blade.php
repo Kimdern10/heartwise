@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component {
@@ -15,6 +16,13 @@ new class extends Component {
     public function unread(): int
     {
         return Auth::user()->unreadNotifications()->count();
+    }
+
+    /** The live checker found something new: show it straight away. */
+    #[On('live-counts')]
+    public function refreshCounts(): void
+    {
+        unset($this->items, $this->unread);
     }
 
     public function markAllRead(): void
@@ -32,7 +40,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="relative" wire:poll.30s x-data="{ open: false }" x-on:keydown.escape.window="open = false">
+<div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
     <button type="button" x-ref="bell" x-on:click="open = ! open" class="relative flex size-10 items-center justify-center rounded-full transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
         aria-label="{{ __('Notifications') }}" data-test="bell">
         <flux:icon.bell class="size-6" />

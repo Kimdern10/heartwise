@@ -122,7 +122,7 @@ class Profile extends Model
      */
     public function preferred(string $key): array
     {
-        return array_values($this->pref_values[$key] ?? []);
+        return $this->pref_values[$key] ?? [];
     }
 
     /** @return BelongsTo<User, $this> */

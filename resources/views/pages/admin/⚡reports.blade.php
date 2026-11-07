@@ -1,7 +1,7 @@
 <?php
 
 use App\Enums\ReportStatus;
-use App\Livewire\Concerns\ModeratesMembers;
+use App\Livewire\Base\ModerationComponent;
 use App\Models\Report;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -10,8 +10,8 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('Reports')] class extends Component {
-    use ModeratesMembers, WithPagination;
+new #[Title('Reports')] class extends ModerationComponent {
+    use WithPagination;
 
     #[Url]
     public string $status = 'open';

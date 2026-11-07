@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\Concerns\ModeratesMembers;
+use App\Livewire\Base\ModerationComponent;
 use App\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -8,8 +8,8 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Title('Members')] class extends Component {
-    use ModeratesMembers, WithPagination;
+new #[Title('Members')] class extends ModerationComponent {
+    use WithPagination;
 
     #[Url]
     public string $search = '';

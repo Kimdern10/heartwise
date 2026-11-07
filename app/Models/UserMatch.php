@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,6 +28,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['user_one_id', 'user_two_id', 'last_message_at'])]
 class UserMatch extends Model
 {
+    use HasPublicId;
+
     protected $table = 'matches';
 
     protected function casts(): array

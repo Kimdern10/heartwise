@@ -35,7 +35,8 @@ class CheckConnection
             Cookie::queue(Cookie::forever('hw_device', $deviceId, httpOnly: true, sameSite: 'lax'));
         }
 
-        $result = $this->inspector->inspect((string) $request->ip(), $request->cookie('tz'), $request->user(), $deviceId);
+        $tz = $request->cookie('tz');
+        $result = $this->inspector->inspect((string) $request->ip(), is_string($tz) ? $tz : null, $request->user(), $deviceId);
 
         if ($result['blocked']) {
             return response()->view('blocked-connection', ['reason' => $result['reason']], 403);

@@ -31,8 +31,8 @@ class Compatibility
             }
         }
 
-        $theirAge = $them->user?->age();
-        $myAge = $me->user?->age();
+        $theirAge = $them->user->age();
+        $myAge = $me->user->age();
 
         if ($theirAge && $me->pref_age_min && $me->pref_age_max) {
             $score += ($theirAge >= $me->pref_age_min && $theirAge <= $me->pref_age_max) ? 8 : -10;
