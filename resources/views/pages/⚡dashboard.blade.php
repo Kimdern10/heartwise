@@ -199,34 +199,31 @@ new #[Title('Home')] class extends Component {
         </div>
     @endif
 
-    {{-- Checklist --}}
-    <div class="hw-card p-6 animate-fade-up [animation-delay:200ms]">
-        <div class="flex items-center justify-between">
-            <flux:heading size="lg">{{ __('Get the most out of :app', ['app' => config('app.name')]) }}</flux:heading>
-            <span class="text-sm font-semibold text-zinc-500">{{ $done }}/{{ $total }}</span>
-        </div>
-        <ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            @foreach ($this->steps as $step)
-                <li class="min-w-0">
-                    <a href="{{ $step['route'] }}" @if (! str_contains($step['route'], '#')) wire:navigate @endif
-                        class="flex items-center gap-3 rounded-2xl border p-3.5 transition {{ $step['done'] ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-500/5' : 'border-zinc-200 hover:border-brand-300 hover:bg-brand-50/50 dark:border-zinc-800 dark:hover:bg-white/5' }}">
-                        <span class="flex size-10 shrink-0 items-center justify-center rounded-xl {{ $step['done'] ? 'bg-emerald-500 text-white' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800' }}">
-                            @if ($step['done'])
-                                <flux:icon.check class="size-5" />
-                            @else
+    {{-- Checklist: only the steps still to do; gone once everything is done --}}
+    @php($todo = collect($this->steps)->reject(fn ($step) => $step['done'])->values())
+    @if ($todo->isNotEmpty())
+        <div class="hw-card p-6 animate-fade-up [animation-delay:200ms]" data-test="checklist">
+            <div class="flex items-center justify-between">
+                <flux:heading size="lg">{{ __('Get the most out of :app', ['app' => config('app.name')]) }}</flux:heading>
+                <span class="text-sm font-semibold text-zinc-500">{{ trans_choice(':count step left|:count steps left', $todo->count()) }}</span>
+            </div>
+            <ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @foreach ($todo as $step)
+                    <li class="min-w-0">
+                        <a href="{{ $step['route'] }}" @if (! str_contains($step['route'], '#')) wire:navigate @endif
+                            class="flex items-center gap-3 rounded-2xl border border-zinc-200 p-3.5 transition hover:border-brand-300 hover:bg-brand-50/50 dark:border-zinc-800 dark:hover:bg-white/5">
+                            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
                                 <flux:icon :name="$step['icon']" class="size-5" />
-                            @endif
-                        </span>
-                        <div class="min-w-0 flex-1">
-                            <p class="font-semibold {{ $step['done'] ? 'text-emerald-700 dark:text-emerald-400' : '' }}">{{ $step['label'] }}</p>
-                            <p class="truncate text-xs text-zinc-500">{{ $step['hint'] }}</p>
-                        </div>
-                        @unless ($step['done'])
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <p class="font-semibold">{{ $step['label'] }}</p>
+                                <p class="truncate text-xs text-zinc-500">{{ $step['hint'] }}</p>
+                            </div>
                             <flux:icon.chevron-right class="size-4 text-zinc-400" />
-                        @endunless
-                    </a>
-                </li>
-            @endforeach
-        </ul>
-    </div>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 </section>

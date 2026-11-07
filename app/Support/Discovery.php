@@ -129,15 +129,12 @@ class Discovery
             return ['pick' => null, 'standouts' => collect()];
         }
 
-        $ids = Cache::remember('daily-picks:'.$viewer->id.':'.now()->toDateString(), now()->endOfDay(), function () use ($viewer, $profile) {
-            // Prefer people in the member's own state; fall back to the whole US.
-            $candidates = self::for($viewer, ['state' => $profile->state])->with('profile.user')->limit(60)->get();
+        $key = 'daily-picks:'.$viewer->id.':'.now()->toDateString().':'.mb_strtolower(trim((string) $profile->city)).','.$profile->state;
 
-            if ($candidates->count() < 3) {
-                $candidates = self::for($viewer)->with('profile.user')->limit(60)->get();
-            }
-
-            return $candidates
+        $ids = Cache::remember($key, now()->endOfDay(), function () use ($viewer, $profile) {
+            // Only people in the member's own city, like Discover and Search.
+            return self::for($viewer, ['state' => $profile->state, 'city' => $profile->city])
+                ->with('profile.user')->limit(60)->get()
                 ->sortByDesc(fn (User $u) => Compatibility::score($profile, $u->profile))
                 ->take(7)
                 ->pluck('id')

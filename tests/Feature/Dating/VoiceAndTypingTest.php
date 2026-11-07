@@ -3,6 +3,7 @@
 use App\Models\Message;
 use App\Models\User;
 use App\Models\UserMatch;
+use App\Support\Discovery;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -98,4 +99,31 @@ test('robots.txt points at the real sitemap and keeps member pages private', fun
         ->assertSee('Sitemap: '.route('sitemap'))
         ->assertSee('Disallow: /messages')
         ->assertSee('Disallow: /voice/');
+});
+
+test('the home checklist shows only steps still to do, and disappears when all are done', function () {
+    $me = User::factory()->discoverable()->create();
+
+    $this->actingAs($me)->get(route('dashboard'))
+        ->assertSee('data-test="checklist"', false)
+        ->assertSee('Verify your location')
+        ->assertDontSee('Create your profile')
+        ->assertDontSee('Verify your email');
+
+    $me->profile->forceFill(['latitude' => 40.7, 'longitude' => -74.0, 'location_verified_at' => now(), 'photo_verified_at' => now()])->save();
+
+    $this->actingAs($me->fresh())->get(route('dashboard'))
+        ->assertDontSee('data-test="checklist"', false)
+        ->assertDontSee('Get the most out of');
+});
+
+test('today’s picks only come from my own city', function () {
+    $me = User::factory()->discoverable(['gender' => 'man', 'seeking' => 'women', 'state' => 'NY', 'city' => 'New York'])->create();
+    User::factory()->discoverable(['display_name' => 'CityGirl', 'gender' => 'woman', 'seeking' => 'men', 'state' => 'NY', 'city' => 'New York'])->create();
+    User::factory()->discoverable(['display_name' => 'YonkersGirl', 'gender' => 'woman', 'seeking' => 'men', 'state' => 'NY', 'city' => 'Yonkers'])->create();
+
+    $picks = Discovery::dailyPicks($me);
+    $names = collect([$picks['pick']])->merge($picks['standouts'])->filter()->map->displayName();
+
+    expect($names)->toContain('CityGirl')->not->toContain('YonkersGirl');
 });
