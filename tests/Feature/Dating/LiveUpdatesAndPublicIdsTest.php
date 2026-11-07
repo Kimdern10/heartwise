@@ -57,3 +57,24 @@ test('the live checker announces a new match and a new like', function () {
     // Nothing new: nothing is sent again.
     $pulse->call('check')->assertNotDispatched('live-alert')->assertNotDispatched('live-counts');
 });
+
+test('when someone unmatches, the other person’s open chat closes and old bell links are removed', function () {
+    $me = User::factory()->discoverable()->create();
+    $her = User::factory()->discoverable()->create();
+    $match = UserMatch::createBetween($me, $her);
+    app(SendMessage::class)->handle($me, $match, 'Hi Isabella!');
+
+    expect($her->notifications()->count())->toBe(1);
+
+    $herChat = Livewire::actingAs($her)->test('pages::messages.show', ['match' => $match]);
+
+    $match->unmatch($me);
+
+    $herChat->call('poll')->assertRedirect(route('messages.index'));
+
+    expect($her->notifications()->count())->toBe(0)
+        ->and($her->unreadMessagesCount())->toBe(0);
+
+    $this->actingAs($her)->get(route('messages.index'))->assertOk();
+    $this->actingAs($her)->get(route('discover'))->assertOk()->assertDontSee($me->displayName());
+});

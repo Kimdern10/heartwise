@@ -75,6 +75,12 @@ class UserMatch extends Model
     public function unmatch(User $by): void
     {
         $this->forceFill(['unmatched_by' => $by->id, 'unmatched_at' => now()])->save();
+
+        // Bell entries for this chat would lead to a closed page, so remove them for both people.
+        $url = route('messages.show', $this);
+        foreach ([$this->userOne, $this->userTwo] as $member) {
+            $member->notifications()->where('data->url', $url)->delete();
+        }
     }
 
     /** @return HasMany<DateFeedback, $this> */

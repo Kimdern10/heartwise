@@ -63,6 +63,17 @@ new class extends Component {
 
     public function poll(): void
     {
+        // The other person unmatched (or blocked) while this chat was open: close it gently.
+        $match = UserMatch::find($this->matchId);
+        $other = $match?->otherUser(Auth::user());
+
+        if (! $match?->isActive() || ! $other?->isActive() || Auth::user()->hasBlockBetween($other)) {
+            Flux::toast(text: __('This conversation has ended.'));
+            $this->redirectRoute('messages.index', navigate: true);
+
+            return;
+        }
+
         $this->markRead();
         unset($this->messages);
     }
