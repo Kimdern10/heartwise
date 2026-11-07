@@ -256,6 +256,74 @@ window.addEventListener('live-alert', (event) => {
  * Swipe deck (Alpine): drag a card left to pass, right to like.
  * ------------------------------------------------------------- */
 document.addEventListener('alpine:init', () => {
+    /* Voice notes in chat: record up to 60 seconds, then upload and send. */
+    window.Alpine.data('voiceRecorder', () => ({
+        supported: !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder),
+        recording: false,
+        uploading: false,
+        seconds: 0,
+        recorder: null,
+        chunks: [],
+        timer: null,
+        cancelled: false,
+
+        get clock() {
+            return `0:${String(this.seconds).padStart(2, '0')}`;
+        },
+
+        async start() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find((t) => MediaRecorder.isTypeSupported?.(t));
+                this.recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+                this.chunks = [];
+                this.cancelled = false;
+                this.recorder.ondataavailable = (e) => e.data.size && this.chunks.push(e.data);
+                this.recorder.onstop = () => {
+                    stream.getTracks().forEach((t) => t.stop());
+                    if (!this.cancelled) this.upload();
+                };
+                this.recorder.start();
+                this.recording = true;
+                this.seconds = 0;
+                this.timer = setInterval(() => {
+                    this.seconds++;
+                    if (this.seconds >= 60) this.stop();
+                }, 1000);
+            } catch (e) {
+                window.hwToast?.('Allow the microphone to send voice notes.', 'warning');
+            }
+        },
+
+        stop() {
+            clearInterval(this.timer);
+            this.recording = false;
+            if (this.recorder?.state === 'recording') this.recorder.stop();
+        },
+
+        cancel() {
+            this.cancelled = true;
+            this.stop();
+        },
+
+        upload() {
+            const seconds = Math.max(1, this.seconds);
+            const type = this.recorder?.mimeType || 'audio/webm';
+            const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+            const file = new File(this.chunks, `voice.${ext}`, { type: type.split(';')[0] });
+            this.uploading = true;
+            this.$wire.upload(
+                'voice',
+                file,
+                () => this.$wire.sendVoice(seconds).finally(() => (this.uploading = false)),
+                () => {
+                    this.uploading = false;
+                    window.hwToast?.('The voice note could not be sent. Please try again.', 'error');
+                },
+            );
+        },
+    }));
+
     window.Alpine.data('swipeCard', (userId) => ({
         x: 0,
         y: 0,

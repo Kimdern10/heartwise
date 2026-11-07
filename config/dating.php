@@ -32,6 +32,8 @@ return [
         'likes_per_minute' => 20,
         'messages_per_minute' => 15,
         'messages_per_day_new_account' => 100,
+        'voice_seconds' => 60,
+        'voice_max_kb' => 3072,
         'max_photos' => 6,
         'max_photo_kb' => 8192,
         'reports_per_day' => 10,

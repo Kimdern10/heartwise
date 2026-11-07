@@ -137,6 +137,30 @@ new #[Title('Home')] class extends Component {
         @endforeach
     </div>
 
+    {{-- Online now: people in my city active in the last 15 minutes (only those who show it) --}}
+    @php($myProfile = Auth::user()->profile)
+    @php($onlineNow = $myProfile ? \App\Support\Discovery::for(Auth::user(), ['state' => $myProfile->state, 'city' => $myProfile->city, 'online' => true])->limit(12)->get() : collect())
+    @if ($onlineNow->isNotEmpty())
+        <div class="space-y-3 animate-fade-up [animation-delay:120ms]" data-test="online-now">
+            <h2 class="flex items-center gap-2 font-display text-2xl">
+                <span class="relative flex size-3"><span class="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex size-3 rounded-full bg-emerald-500"></span></span>
+                {{ __('Online now in :city', ['city' => $myProfile->city]) }}
+            </h2>
+            <div class="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+                @foreach ($onlineNow as $person)
+                    <a href="{{ route('people.show', $person) }}" wire:navigate class="w-20 shrink-0 text-center">
+                        <span class="relative mx-auto block size-16">
+                            <x-member-photo :user="$person" class="size-16 rounded-full ring-2 ring-emerald-400 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900" />
+                            <span class="absolute bottom-0 end-0 size-4 rounded-full border-2 border-white bg-emerald-500 dark:border-zinc-900"></span>
+                        </span>
+                        <span class="mt-1.5 block truncate text-xs font-semibold">{{ $person->displayName() }}, {{ $person->age() }}</span>
+                    </a>
+                @endforeach
+            </div>
+            <span hidden data-test="online-now-end"></span>
+        </div>
+    @endif
+
     {{-- Daily picks --}}
     @php($picks = \App\Support\Discovery::dailyPicks(Auth::user()))
     @if ($picks['pick'] || $picks['standouts']->isNotEmpty())

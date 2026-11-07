@@ -7,15 +7,45 @@ use App\Models\UserMatch;
 use App\Support\MessageScreener;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component {
+    use WithFileUploads;
+
     #[Locked]
     public int $matchId;
 
     public string $body = '';
+
+    /** A recorded voice note, uploaded from the browser. */
+    public $voice = null;
+
+    public function sendVoice(SendMessage $sendMessage, int $seconds): bool
+    {
+        $this->validate([
+            'voice' => ['required', 'file', 'max:'.config('dating.limits.voice_max_kb'),
+                'mimetypes:audio/webm,video/webm,audio/ogg,audio/mp4,video/mp4,audio/x-m4a,audio/aac,audio/mpeg,audio/wav,audio/x-wav'],
+        ], ['voice.max' => __('That voice note is too long.')]);
+
+        try {
+            $sendMessage->handleVoice(Auth::user(), $this->match, $this->voice, $seconds);
+        } catch (DatingActionException $e) {
+            Flux::toast(variant: 'warning', text: $e->getMessage());
+
+            return false;
+        } finally {
+            $this->voice = null;
+        }
+
+        unset($this->messages, $this->icebreakers);
+        $this->dispatch('message-sent');
+
+        return true;
+    }
 
     public function mount(UserMatch $match): void
     {
@@ -75,7 +105,28 @@ new class extends Component {
         }
 
         $this->markRead();
-        unset($this->messages);
+        unset($this->messages, $this->otherIsTyping);
+
+        // Keep "Active now" accurate while someone sits in a chat.
+        Auth::user()->forceFill(['last_active_at' => now()])->saveQuietly();
+    }
+
+    /** The browser calls this every few seconds while the member is typing. */
+    public function typing(): void
+    {
+        Cache::put($this->typingKey(Auth::id()), true, now()->addSeconds(6));
+        $this->skipRender();
+    }
+
+    #[Computed]
+    public function otherIsTyping(): bool
+    {
+        return Cache::has($this->typingKey($this->other->id));
+    }
+
+    private function typingKey(int $userId): string
+    {
+        return "typing:{$this->matchId}:{$userId}";
     }
 
     /**
@@ -93,6 +144,7 @@ new class extends Component {
         }
 
         $this->body = '';
+        Cache::forget($this->typingKey(Auth::id()));
         unset($this->messages, $this->icebreakers);
         $this->dispatch('message-sent');
 
@@ -209,7 +261,7 @@ new class extends Component {
 @php($online = $other->profile?->show_last_active && $other->last_active_at?->gt(now()->subMinutes(15)))
 
 {{-- On phones the chat covers the whole screen (like a messaging app); the back arrow leaves it. --}}
-<section class="mx-auto flex w-full max-w-3xl flex-col max-lg:fixed max-lg:inset-0 max-lg:z-50 max-lg:h-[100dvh] max-lg:max-w-none max-lg:bg-white lg:h-[calc(100svh-4rem)] dark:max-lg:bg-zinc-950" data-test="chat-screen">
+<section class="mx-auto flex w-full flex-col max-lg:fixed max-lg:inset-0 max-lg:z-50 max-lg:h-[100dvh] max-lg:bg-white lg:-my-2 lg:h-[calc(100svh-3rem)] dark:max-lg:bg-zinc-950" data-test="chat-screen">
     {{-- Messages appear the moment you press send; the server saves them in the background. --}}
     <div class="hw-card flex h-full flex-col overflow-hidden max-lg:!rounded-none max-lg:!border-0 max-lg:!shadow-none"
         x-data="{
@@ -274,7 +326,15 @@ new class extends Component {
                 @php($mine = $message->sender_id === Auth::id())
                 <div wire:key="msg-{{ $message->id }}" class="bubble-in flex {{ $mine ? 'justify-end' : 'justify-start' }}">
                     <div class="max-w-[80%] space-y-1">
-                        <div class="whitespace-pre-line break-words px-4 py-2.5 text-[15px] leading-relaxed shadow-sm {{ $mine ? 'bg-brand-gradient rounded-3xl rounded-br-lg text-white' : 'rounded-3xl rounded-bl-lg bg-white text-zinc-900 dark:bg-zinc-800 dark:text-white' }}">{{ $message->body }}</div>
+                        @if ($message->isVoice())
+                            <div class="flex items-center gap-2 px-3 py-2 shadow-sm {{ $mine ? 'bg-brand-gradient rounded-3xl rounded-br-lg text-white' : 'rounded-3xl rounded-bl-lg bg-white dark:bg-zinc-800' }}" data-test="voice-note">
+                                <flux:icon.microphone class="size-4 shrink-0" />
+                                <audio controls preload="none" src="{{ route('voice.show', $message) }}" class="h-9 w-56 max-w-full"></audio>
+                                <span class="text-xs opacity-80">{{ gmdate('i:s', (int) $message->audio_seconds) }}</span>
+                            </div>
+                        @else
+                            <div class="whitespace-pre-line break-words px-4 py-2.5 text-[15px] leading-relaxed shadow-sm {{ $mine ? 'bg-brand-gradient rounded-3xl rounded-br-lg text-white' : 'rounded-3xl rounded-bl-lg bg-white text-zinc-900 dark:bg-zinc-800 dark:text-white' }}">{{ $message->body }}</div>
+                        @endif
                         @if (! $mine && $warning = \App\Support\MessageScreener::warning($message->flag))
                             <div class="flex items-start gap-1.5 rounded-2xl bg-amber-50 p-2.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200" data-test="scam-warning">
                                 <flux:icon.exclamation-triangle class="size-4 shrink-0" />
@@ -309,6 +369,18 @@ new class extends Component {
                     </div>
                 </template>
             </div>
+
+            {{-- "Andre is typing…" --}}
+            @if ($this->otherIsTyping)
+                <div class="flex items-center gap-2 text-xs text-zinc-500" data-test="typing">
+                    <span class="flex gap-1 rounded-3xl rounded-bl-lg bg-white px-4 py-3 shadow-sm dark:bg-zinc-800">
+                        <span class="size-1.5 animate-bounce rounded-full bg-zinc-400"></span>
+                        <span class="size-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:150ms]"></span>
+                        <span class="size-1.5 animate-bounce rounded-full bg-zinc-400 [animation-delay:300ms]"></span>
+                    </span>
+                    {{ __(':name is typing…', ['name' => $other->displayName()]) }}
+                </div>
+            @endif
         </div>
 
         @if ($this->askWeMet)
@@ -341,11 +413,29 @@ new class extends Component {
         @endif
 
         {{-- Composer --}}
-        <form x-on:submit.prevent="submit()" class="flex items-end gap-2 border-t border-zinc-100 p-3 dark:border-zinc-800">
-            <flux:textarea x-model="draft" rows="auto" resize="none" maxlength="1000" class="flex-1"
-                :placeholder="__('Write a message…')" :aria-label="__('Message')"
-                x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); submit() }" />
-            <button type="submit" data-test="send-message" aria-label="{{ __('Send') }}"
+        <form x-on:submit.prevent="submit()" x-data="voiceRecorder" class="flex items-end gap-2 border-t border-zinc-100 p-3 dark:border-zinc-800">
+            {{-- Recording a voice note (up to 60 seconds) --}}
+            <div x-show="recording || uploading" x-cloak class="flex h-11 flex-1 items-center gap-3 rounded-full bg-brand-50 px-4 text-sm font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-300" data-test="recording">
+                <span class="relative flex size-3"><span class="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-75"></span><span class="relative inline-flex size-3 rounded-full bg-brand-600"></span></span>
+                <span x-text="uploading ? @js(__('Sending voice note…')) : @js(__('Recording')) + ' ' + clock"></span>
+                <button type="button" x-show="recording" x-on:click="cancel()" class="ms-auto text-xs underline">{{ __('Cancel') }}</button>
+            </div>
+
+            <div x-show="! recording && ! uploading" class="flex flex-1 items-end gap-2">
+                <flux:textarea x-model="draft" x-on:input.throttle.2500ms="$wire.typing()" rows="auto" resize="none" maxlength="1000" class="flex-1"
+                    :placeholder="__('Write a message…')" :aria-label="__('Message')"
+                    x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); submit() }" />
+                <button type="button" x-show="! draft.trim() && supported" x-on:click="start()" data-test="record-voice" aria-label="{{ __('Record a voice note') }}"
+                    class="flex size-11 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 transition hover:scale-105 active:scale-95 dark:bg-zinc-800 dark:text-zinc-200">
+                    <flux:icon.microphone class="size-5" />
+                </button>
+            </div>
+
+            <button type="button" x-show="recording" x-cloak x-on:click="stop()" aria-label="{{ __('Send voice note') }}"
+                class="bg-brand-gradient flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-lg shadow-brand-500/30 transition hover:scale-105 active:scale-95">
+                <flux:icon.paper-airplane class="size-5" />
+            </button>
+            <button type="submit" x-show="! recording && ! uploading && (draft.trim() || ! supported)" data-test="send-message" aria-label="{{ __('Send') }}"
                 class="bg-brand-gradient flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-lg shadow-brand-500/30 transition hover:scale-105 active:scale-95">
                 <flux:icon.paper-airplane class="size-5" />
             </button>

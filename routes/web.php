@@ -5,6 +5,7 @@ use App\Http\Controllers\DataExportController;
 use App\Http\Controllers\DatingAreaController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\SocialLoginController;
+use App\Http\Controllers\VoiceNoteController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -34,6 +35,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('photos/{photo}/{size}', PhotoController::class)
         ->whereIn('size', ['sm', 'lg'])
         ->name('photos.show');
+
+    Route::get('voice/{message}', VoiceNoteController::class)->name('voice.show');
 
     // Admins can open any member's profile to review it.
     Route::middleware('onboarded')->group(function () {
