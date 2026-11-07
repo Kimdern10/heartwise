@@ -4,11 +4,35 @@
     $place = $city ? "{$city}, {$code}" : $stateName;
     $title = __('Online dating in :place', ['place' => $place]);
     $description = __('Meet real, verified singles in :place. Free to join, 18+ only, and every profile is reviewed by a real person.', ['place' => $place]);
+
+    // Questions people search for. Shown on the page and given to Google as structured data.
+    $faqs = [
+        [__('How do I meet singles in :place?', ['place' => $place]), __('Create a free profile, add a few photos and answer some prompts. :app shows you people in your own city first, so the people you match with are nearby and easy to meet.', ['app' => config('app.name')])],
+        [__('Is :app free in :place?', ['app' => config('app.name'), 'place' => $place]), __('Yes. Joining, building your profile, liking and chatting with your matches are free. Premium adds extras such as unlimited likes, seeing who liked you and advanced filters.')],
+        [__('Are the profiles in :place real?', ['place' => $place]), __('Every new profile and photo is checked by a real person before it is shown. Members can also verify a selfie and their location, and you can report or block anyone in one tap.')],
+        [__('Who can join?', []), __('Adults 18 and over living in the United States who are looking for a real relationship, from dating to marriage.')],
+        [__('How do I stay safe on a first date in :place?', ['place' => $place]), __('Chat on :app first, meet somewhere public, tell a friend your plans (or use our date check-in), and never send money or gift cards to someone you met online.', ['app' => config('app.name')])],
+    ];
+
+    $breadcrumbs = array_values(array_filter([
+        ['name' => __('Dating in the US'), 'url' => route('areas.index')],
+        $city ? ['name' => $stateName, 'url' => route('areas.state', DatingAreaController::stateSlug($code))] : null,
+        ['name' => $place, 'url' => url()->current()],
+    ]));
+
+    $jsonLd = json_encode([
+    '@context' => 'https://schema.org',
+    '@graph' => [
+        ['@type' => 'BreadcrumbList', 'itemListElement' => collect($breadcrumbs)->map(fn ($b, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $b['name'], 'item' => $b['url']])->all()],
+        ['@type' => 'FAQPage', 'mainEntity' => collect($faqs)->map(fn ($f) => ['@type' => 'Question', 'name' => $f[0], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]]])->all()],
+    ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 @endphp
 
 <x-layouts::public :title="$title" :description="$description">
     @push('head')
         <link rel="canonical" href="{{ url()->current() }}">
+        <script type="application/ld+json">{!! $jsonLd !!}</script>
     @endpush
 
     <section class="relative overflow-hidden">
@@ -28,7 +52,9 @@
                     ? __('Looking for someone special in :city? Meet genuine singles near you — every profile is checked by a real person, and members can verify their selfie and location.', ['city' => $city])
                     : __('Meet genuine singles across :state. Every profile is checked by a real person, and members can verify their selfie and location.', ['state' => $stateName]) }}
             </p>
-            @if ($members)
+            @if ($cityMembers ?? null)
+                <p class="mt-4 font-semibold">{{ __(':n members in :city', ['n' => number_format($cityMembers), 'city' => $city]) }}</p>
+            @elseif ($members)
                 <p class="mt-4 font-semibold">{{ __(':n members in :state', ['n' => number_format($members), 'state' => $stateName]) }}</p>
             @endif
             <div class="mt-8 flex flex-wrap justify-center gap-3">
@@ -61,6 +87,21 @@
             <li>{{ __('Never send money, gift cards or crypto to someone you met online.') }}</li>
         </ul>
         <a href="{{ route('legal.safety') }}" class="mt-4 inline-block font-semibold underline">{{ __('Read all our safety tips') }}</a>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 pb-16" data-test="area-faq">
+        <h2 class="font-display text-3xl">{{ __('Questions about dating in :place', ['place' => $place]) }}</h2>
+        <div class="mt-5 divide-y divide-zinc-200 rounded-2xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+            @foreach ($faqs as [$question, $answer])
+                <details class="group p-5" @if ($loop->first) open @endif>
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
+                        {{ $question }}
+                        <flux:icon.chevron-down class="size-4 shrink-0 transition group-open:rotate-180" />
+                    </summary>
+                    <p class="mt-3 text-zinc-600 dark:text-zinc-400">{{ $answer }}</p>
+                </details>
+            @endforeach
+        </div>
     </section>
 
     @if ($cities->isNotEmpty())

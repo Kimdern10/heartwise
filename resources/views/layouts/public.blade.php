@@ -5,6 +5,16 @@
         @isset($description)
             <meta name="description" content="{{ $description }}" />
         @endisset
+        {{-- How the page looks when shared on WhatsApp, Facebook, X, iMessage… --}}
+        <meta property="og:site_name" content="{{ config('app.name') }}" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="{{ url()->current() }}" />
+        <meta property="og:title" content="{{ isset($title) ? $title.' — '.config('app.name') : config('app.name') }}" />
+        @isset($description)
+            <meta property="og:description" content="{{ $description }}" />
+        @endisset
+        <meta property="og:image" content="{{ config('marketing.photos.portrait-3') ? config('marketing.photos.portrait-3').'?auto=format&fit=crop&w=1200&h=630&q=75' : asset('apple-touch-icon.png') }}" />
+        <meta name="twitter:card" content="summary_large_image" />
         @stack('head')
     </head>
     <body class="app-canvas flex min-h-screen flex-col text-zinc-900 antialiased dark:text-zinc-100">

@@ -65,6 +65,7 @@ class DatingAreaController extends Controller
             'stateName' => config('dating.us_states.'.$code),
             'city' => $entry[0],
             'members' => $this->memberCount($code),
+            'cityMembers' => $this->memberCount($code, $entry[0]),
             'cities' => collect(Config::array('us_cities'))->filter(fn ($c, $slug) => $c[1] === $code && $slug !== $city),
         ]);
     }
@@ -84,11 +85,27 @@ class DatingAreaController extends Controller
         return response()->view('areas.sitemap', ['urls' => $urls])->header('Content-Type', 'application/xml');
     }
 
-    private function memberCount(string $code): ?int
+    /**
+     * Search engines may read the public pages; members' pages stay private.
+     * The sitemap address uses the site's real domain (APP_URL).
+     */
+    public function robots(): Response
     {
-        $count = Cache::remember('area-count:'.$code, now()->addHours(6), fn () => User::query()
+        $private = ['/dashboard', '/discover', '/search', '/people/', '/messages', '/matches', '/activity',
+            '/photos/', '/voice/', '/admin', '/settings', '/welcome', '/my-profile', '/preferences', '/premium'];
+
+        $lines = ['User-agent: *', ...array_map(fn ($path) => 'Disallow: '.$path, $private), '', 'Sitemap: '.route('sitemap')];
+
+        return response(implode("\n", $lines)."\n")->header('Content-Type', 'text/plain');
+    }
+
+    private function memberCount(string $code, ?string $city = null): ?int
+    {
+        $count = Cache::remember('area-count:'.$code.':'.Str::slug((string) $city), now()->addHours(6), fn () => User::query()
             ->discoverable()->where('is_sample', false)
-            ->whereHas('profile', fn ($q) => $q->where('state', $code))->count());
+            ->whereHas('profile', fn ($q) => $q->where('state', $code)
+                ->when($city, fn ($q) => $q->whereRaw('LOWER(TRIM(city)) = ?', [mb_strtolower((string) $city)])))
+            ->count());
 
         return $count >= self::MIN_COUNT_TO_SHOW ? $count : null;
     }

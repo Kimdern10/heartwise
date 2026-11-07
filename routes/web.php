@@ -22,6 +22,7 @@ Route::get('dating', [DatingAreaController::class, 'index'])->name('areas.index'
 Route::get('dating/{state}', [DatingAreaController::class, 'state'])->name('areas.state');
 Route::get('dating/{state}/{city}', [DatingAreaController::class, 'city'])->name('areas.city');
 Route::get('sitemap.xml', [DatingAreaController::class, 'sitemap'])->name('sitemap');
+Route::get('robots.txt', [DatingAreaController::class, 'robots'])->name('robots');
 
 // Sign in with Google / Apple
 Route::middleware('guest')->group(function () {

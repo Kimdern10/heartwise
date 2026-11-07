@@ -77,3 +77,25 @@ test('home shows who is online now in my city', function () {
 
     expect($strip)->toContain('OnlineNina')->not->toContain('AwayAmy');
 });
+
+test('city pages have questions, structured data and sharing previews for Google', function () {
+    $html = $this->get(route('areas.city', ['new-york', 'new-york']))
+        ->assertOk()
+        ->assertSee('Questions about dating in New York, NY')
+        ->assertSee('application/ld+json', false)
+        ->assertSee('"@type":"FAQPage"', false)
+        ->assertSee('"@type":"BreadcrumbList"', false)
+        ->assertSee('property="og:title"', false)
+        ->getContent();
+
+    expect(json_decode(Str::betweenFirst($html, '<script type="application/ld+json">', '</script>'), true))
+        ->toHaveKey('@graph');
+});
+
+test('robots.txt points at the real sitemap and keeps member pages private', function () {
+    $this->get('/robots.txt')
+        ->assertOk()
+        ->assertSee('Sitemap: '.route('sitemap'))
+        ->assertSee('Disallow: /messages')
+        ->assertSee('Disallow: /voice/');
+});
