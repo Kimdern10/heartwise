@@ -67,19 +67,25 @@ new class extends Component {
         unset($this->messages);
     }
 
-    public function send(SendMessage $sendMessage): void
+    /**
+     * The browser shows the message straight away and passes its text here;
+     * returns false if it couldn't be sent, so the browser can put it back.
+     */
+    public function send(SendMessage $sendMessage, ?string $text = null): bool
     {
         try {
-            $sendMessage->handle(Auth::user(), $this->match, $this->body);
+            $sendMessage->handle(Auth::user(), $this->match, $text ?? $this->body);
         } catch (DatingActionException $e) {
             Flux::toast(variant: 'warning', text: $e->getMessage());
 
-            return;
+            return false;
         }
 
         $this->body = '';
-        unset($this->messages);
+        unset($this->messages, $this->icebreakers);
         $this->dispatch('message-sent');
+
+        return true;
     }
 
     // "Plan a date safely" form
@@ -192,7 +198,27 @@ new class extends Component {
 @php($online = $other->profile?->show_last_active && $other->last_active_at?->gt(now()->subMinutes(15)))
 
 <section class="mx-auto flex h-[calc(100svh-12rem)] w-full max-w-3xl flex-col lg:h-[calc(100svh-4rem)]">
-    <div class="hw-card flex h-full flex-col overflow-hidden">
+    {{-- Messages appear the moment you press send; the server saves them in the background. --}}
+    <div class="hw-card flex h-full flex-col overflow-hidden"
+        x-data="{
+            draft: '',
+            pending: [],
+            submit() {
+                const text = this.draft.trim();
+                if (! text) return;
+                const id = Date.now();
+                this.pending.push({ id, text });
+                this.draft = '';
+                this.$nextTick(() => this.$dispatch('message-sent'));
+                const done = (ok) => {
+                    this.pending = this.pending.filter((m) => m.id !== id);
+                    if (ok !== true && ! this.draft) this.draft = text;
+                };
+                this.$wire.send(text).then(done, () => done(false));
+                // If the connection drops, give the text back instead of waiting forever.
+                setTimeout(() => { if (this.pending.some((m) => m.id === id)) done(false) }, 20000);
+            },
+        }">
         {{-- Header --}}
         <div class="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
             <flux:button size="sm" variant="ghost" icon="arrow-left" :href="route('messages.index')" wire:navigate :aria-label="__('Back to messages')" />
@@ -259,6 +285,18 @@ new class extends Component {
                     <p class="text-sm text-zinc-500">{{ __('Break the ice — ask about something in their profile.') }}</p>
                 </div>
             @endforelse
+
+            {{-- Sending: shown instantly, replaced by the saved message a moment later --}}
+            <div wire:ignore class="space-y-3">
+                <template x-for="m in pending" :key="m.id">
+                    <div class="flex justify-end" data-test="pending-message">
+                        <div class="max-w-[80%] space-y-1">
+                            <div class="bg-brand-gradient whitespace-pre-line break-words rounded-3xl rounded-br-lg px-4 py-2.5 text-[15px] leading-relaxed text-white shadow-sm" x-text="m.text"></div>
+                            <div class="px-2 text-end text-[11px] text-zinc-400">{{ __('Sending…') }}</div>
+                        </div>
+                    </div>
+                </template>
+            </div>
         </div>
 
         @if ($this->askWeMet)
@@ -282,7 +320,7 @@ new class extends Component {
             <div class="flex gap-2 overflow-x-auto border-t border-zinc-100 px-3 pt-3 dark:border-zinc-800" data-test="icebreakers">
                 <span class="flex shrink-0 items-center gap-1 text-xs font-semibold text-zinc-500"><flux:icon.light-bulb class="size-4" />{{ __('Ideas:') }}</span>
                 @foreach ($this->icebreakers as $idea)
-                    <button type="button" wire:click="$set('body', @js($idea))"
+                    <button type="button" x-on:click="draft = @js($idea); $nextTick(() => $root.querySelector('textarea')?.focus())"
                         class="shrink-0 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium transition hover:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-white">
                         {{ $idea }}
                     </button>
@@ -291,14 +329,13 @@ new class extends Component {
         @endif
 
         {{-- Composer --}}
-        <form wire:submit="send" class="flex items-end gap-2 border-t border-zinc-100 p-3 dark:border-zinc-800">
-            <flux:textarea wire:model="body" rows="auto" resize="none" maxlength="1000" class="flex-1"
+        <form x-on:submit.prevent="submit()" class="flex items-end gap-2 border-t border-zinc-100 p-3 dark:border-zinc-800">
+            <flux:textarea x-model="draft" rows="auto" resize="none" maxlength="1000" class="flex-1"
                 :placeholder="__('Write a message…')" :aria-label="__('Message')"
-                x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $wire.send() }" />
+                x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); submit() }" />
             <button type="submit" data-test="send-message" aria-label="{{ __('Send') }}"
                 class="bg-brand-gradient flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-lg shadow-brand-500/30 transition hover:scale-105 active:scale-95">
-                <flux:icon.paper-airplane class="size-5" wire:loading.remove wire:target="send" />
-                <flux:icon.loading class="size-5" wire:loading wire:target="send" />
+                <flux:icon.paper-airplane class="size-5" />
             </button>
         </form>
     </div>

@@ -102,6 +102,8 @@ class TestAccountsSeeder extends Seeder
 
         $this->subscribePremium($users[2]);
         $this->subscribePremium($users[15]);
+        $this->subscribePremium($users[21]);   // Premium women in New York, for the "Premium members only" filter
+        $this->subscribePremium($users[24]);
         $this->buildScenarios($users);
         $this->buildNewYorkScenarios($users);
     }

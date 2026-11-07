@@ -33,6 +33,8 @@ new #[Title('Search')] class extends Component {
     #[Url] public bool $online = false;
     #[Url] public bool $verified = false;
     #[Url] public bool $hasPrompts = false;
+    /** Premium perk: only show other Premium members. */
+    #[Url] public bool $premiumOnly = false;
     #[Url] public string $sort = 'active';
 
     public function mount(): void
@@ -119,10 +121,16 @@ new #[Title('Search')] class extends Component {
                 'height_min' => $this->heightMin, 'height_max' => $this->heightMax,
                 'religion' => $this->religion, 'education' => $this->education, 'has_kids' => $this->hasKids,
                 'wants_kids' => $this->wantsKids, 'drinking' => $this->drinking, 'smoking' => $this->smoking,
+                'premium_only' => $this->premiumOnly,
             ];
         }
 
         $query = Discovery::for(Auth::user(), $filters);
+
+        // Premium members see who else is Premium.
+        if (Auth::user()->isPremium()) {
+            $query->with('subscriptions');
+        }
 
         if ($this->sort === 'newest') {
             $query->reorder()->latest('users.created_at');
@@ -143,7 +151,7 @@ new #[Title('Search')] class extends Component {
         return collect([$this->goal, $this->heightMin, $this->heightMax, $this->religion, $this->education,
             $this->hasKids, $this->wantsKids, $this->drinking, $this->smoking])->filter()->count()
             + (int) ($this->ageMin > 18) + (int) ($this->ageMax < 99)
-            + (int) $this->online + (int) $this->verified + (int) $this->hasPrompts;
+            + (int) $this->online + (int) $this->verified + (int) $this->hasPrompts + (int) ($this->premiumOnly && Auth::user()->isPremium());
     }
 }; ?>
 
@@ -224,6 +232,7 @@ new #[Title('Search')] class extends Component {
                     </div>
 
                     <fieldset @disabled(! $premium) class="space-y-4 disabled:opacity-50">
+                        <x-check wire:model.live="premiumOnly" :label="__('Premium members only')" data-test="premium-only" />
                         <div class="grid grid-cols-2 gap-3">
                             <flux:select size="sm" wire:model.live="heightMin" :label="__('Height from')">
                                 <flux:select.option value="">{{ __('Any') }}</flux:select.option>
@@ -275,6 +284,9 @@ new #[Title('Search')] class extends Component {
                                 <x-member-photo :user="$person" class="aspect-[4/5] w-full transition duration-500 group-hover:scale-[1.03]" />
                                 @if ($online)
                                     <span class="absolute start-2 top-2 flex items-center gap-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[11px] sm:start-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-xs font-semibold text-emerald-700 backdrop-blur"><span class="size-2 rounded-full bg-emerald-500"></span>{{ __('Online') }}</span>
+                                @endif
+                                @if ($premium && $person->subscribed('premium'))
+                                    <span class="absolute bottom-2 start-2 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-amber-950 sm:bottom-3 sm:start-3 sm:text-xs" data-test="premium-badge"><flux:icon.sparkles variant="solid" class="size-3" />{{ __('Premium') }}</span>
                                 @endif
                                 @if ($me)
                                     <span class="absolute end-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[11px] sm:end-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-xs font-bold text-white backdrop-blur">{{ \App\Support\Compatibility::score($me, $person->profile) }}%</span>

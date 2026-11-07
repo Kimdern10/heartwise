@@ -24,7 +24,7 @@ new #[Title('Messages')] class extends Component {
     }
 }; ?>
 
-<section class="mx-auto w-full max-w-3xl space-y-6" wire:poll.15s>
+<section class="mx-auto w-full max-w-3xl space-y-6" wire:poll.5s.keep-alive>
     <div class="flex flex-wrap items-end justify-between gap-4 animate-fade-up">
         <div>
             <flux:heading size="xl" level="1" class="font-display !text-4xl">{{ __('Messages') }}</flux:heading>

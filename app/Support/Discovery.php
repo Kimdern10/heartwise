@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Like;
 use App\Models\Profile;
 use App\Models\User;
+use App\Models\UserMatch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -90,6 +91,17 @@ class Discovery
 
         if (! empty($filters['has_prompts'])) {
             $query->whereHas('prompts');
+        }
+
+        // People I'm already matched with live in Matches and Messages, never here again.
+        $query->whereNotIn('users.id', UserMatch::query()->where('user_one_id', $viewer->id)->select('user_two_id'))
+            ->whereNotIn('users.id', UserMatch::query()->where('user_two_id', $viewer->id)->select('user_one_id'));
+
+        // Premium members can look for other Premium members.
+        if (! empty($filters['premium_only'])) {
+            $query->whereHas('subscriptions', fn (Builder $q) => $q->where('type', 'premium')
+                ->whereIn('stripe_status', ['active', 'trialing'])
+                ->where(fn (Builder $q) => $q->whereNull('ends_at')->orWhere('ends_at', '>', now())));
         }
 
         if ($filters['hide_seen'] ?? true) {
