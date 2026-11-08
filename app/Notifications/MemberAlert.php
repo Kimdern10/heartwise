@@ -42,12 +42,18 @@ class MemberAlert extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $button = match ($this->kind) {
+            'match' => __('Say hello'),
+            'message' => __('Read and reply'),
+            'like' => __('See who likes you'),
+            default => __('Open :app', ['app' => config('app.name')]),
+        };
+
+        // The safety reminder and email settings link are in every email's footer.
         return (new MailMessage)
             ->subject($this->title)
             ->greeting($this->title)
             ->line($this->body)
-            ->action(__('Open :app', ['app' => config('app.name')]), $this->url)
-            ->line(__('Never send money or gift cards to someone you met online.'))
-            ->salutation(__('You can turn these emails off in Settings → Notifications.'));
+            ->action($button, $this->url);
     }
 }

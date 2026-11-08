@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -27,6 +30,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Password reset email in Heartwise words (the look comes from the email template).
+        ResetPassword::toMailUsing(function (CanResetPassword $notifiable, string $token) {
+            $url = url(route('password.reset', ['token' => $token, 'email' => $notifiable->getEmailForPasswordReset()], false));
+            $minutes = config('auth.passwords.'.config('auth.defaults.passwords').'.expire');
+
+            return (new MailMessage)
+                ->subject(__('Reset your :app password', ['app' => config('app.name')]))
+                ->greeting(__('Forgot your password?'))
+                ->line(__('No problem. Tap the button below to choose a new one.'))
+                ->action(__('Choose a new password'), $url)
+                ->line(__('This link expires in :count minutes.', ['count' => $minutes]))
+                ->line(__('If you didn’t ask to reset your password, you can ignore this email — your account is safe.'));
+        });
 
         // Adds the "apple" driver to Socialite.
         Event::listen(SocialiteWasCalled::class, AppleExtendSocialite::class.'@handle');

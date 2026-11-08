@@ -26,10 +26,6 @@ class EmailVerificationCode extends Notification
 
         return (new MailMessage)
             ->subject(__(':code is your :app verification code', ['code' => $this->code, 'app' => $app]))
-            ->greeting(__('Welcome to :app!', ['app' => $app]))
-            ->line(__('Enter this code to verify your email address:'))
-            ->line('**'.implode(' ', str_split($this->code)).'**')
-            ->line(__('The code expires in 15 minutes.'))
-            ->line(__('If you did not create an account, you can ignore this email. We will never ask you for this code by phone or chat.'));
+            ->markdown('mail.verification-code', ['code' => $this->code]);
     }
 }
