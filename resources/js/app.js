@@ -121,6 +121,41 @@ document.addEventListener(
 );
 
 /* ---------------------------------------------------------------
+ * No full page reloads: every link to another page of this site is opened
+ * with Livewire (the page swaps in without reloading), even links that
+ * don't have wire:navigate. Links that must load for real are skipped.
+ * ------------------------------------------------------------- */
+// Pages that must load for real: log out, Google/Apple login, Stripe, downloads, files, signed links.
+const NAVIGATE_SKIP_PREFIXES = [
+    '/logout', '/auth/', '/premium/manage', '/premium/checkout', '/settings/privacy/export',
+    '/my-profile/verify/id', '/photos/', '/voice/', '/email/verify/', '/reset-password', '/stripe/',
+    '/sitemap', '/robots',
+];
+const NAVIGATE_SKIP_EXTENSIONS = ['xml', 'txt', 'pdf', 'zip', 'csv', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'ico', 'json', 'mp3', 'm4a', 'webm', 'ogg'];
+
+const mustLoadForReal = (path) =>
+    NAVIGATE_SKIP_PREFIXES.some((prefix) => path.startsWith(prefix)) ||
+    (path.startsWith('/admin/verifications/') && path.endsWith('/selfie')) ||
+    NAVIGATE_SKIP_EXTENSIONS.includes(path.split('.').pop().toLowerCase());
+
+document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const link = event.target.closest('a[href]');
+    if (!link || !window.Livewire?.navigate) return;
+    if ([...link.attributes].some((a) => a.name.startsWith('wire:navigate'))) return; // Livewire already handles it
+    if ((link.target && link.target !== '_self') || link.hasAttribute('download') || link.hasAttribute('data-no-navigate')) return;
+
+    const url = new URL(link.href, location.href);
+    if (url.origin !== location.origin || !/^https?:$/.test(url.protocol)) return;
+    if (url.hash && url.pathname === location.pathname && url.search === location.search) return; // same-page anchor
+    if (mustLoadForReal(url.pathname)) return;
+
+    event.preventDefault();
+    window.Livewire.navigate(url.href);
+});
+
+/* ---------------------------------------------------------------
  * Reveal-on-scroll: elements with data-reveal fade/slide in.
  * ------------------------------------------------------------- */
 document.documentElement.classList.add('reveal-ready');

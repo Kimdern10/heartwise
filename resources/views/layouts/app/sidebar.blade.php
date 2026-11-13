@@ -46,7 +46,7 @@
             {{-- Phones: who you are, at the top of the drawer --}}
             <div class="flex items-center gap-3 border-b border-zinc-100 pb-4 lg:hidden dark:border-zinc-800" data-test="drawer-profile">
                 @if (! $isAdmin && auth()->user()->profile)
-                    <a href="{{ route('people.show', auth()->user()) }}" wire:navigate class="flex min-w-0 flex-1 items-center gap-3">
+                    <a href="{{ route('people.show', auth()->user()) }}" wire:navigate.hover class="flex min-w-0 flex-1 items-center gap-3">
                         <x-member-photo :user="auth()->user()" class="size-12 shrink-0 rounded-full" />
                         <span class="min-w-0">
                             <span class="block truncate font-bold">{{ auth()->user()->displayName() }}</span>
@@ -63,7 +63,7 @@
             </div>
 
             <flux:sidebar.header class="max-lg:hidden">
-                <x-app-logo :sidebar="true" href="{{ $home }}" wire:navigate />
+                <x-app-logo :sidebar="true" href="{{ $home }}" wire:navigate.hover />
                 @unless ($isAdmin)
                     <div class="ms-auto hidden lg:block"><livewire:notification-bell key="bell-desktop" /></div>
                 @endunless
@@ -80,27 +80,27 @@
                 @if ($isAdmin)
                     <flux:sidebar.group class="grid gap-1">
                         @foreach ($adminNav as [$route, $icon, $label, $count])
-                            <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs($route)" :badge="$count ?: null" wire:navigate>
+                            <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs($route)" :badge="$count ?: null" wire:navigate.hover>
                                 {{ $label }}
                             </flux:sidebar.item>
                         @endforeach
                     </flux:sidebar.group>
                 @else
                     <flux:sidebar.group class="grid gap-1">
-                        <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Home') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate.hover>{{ __('Home') }}</flux:sidebar.item>
                         @foreach ($nav as [$route, $active, $icon, $label])
                             <flux:sidebar.item :icon="$icon" :href="route($route)" :current="request()->routeIs(...explode(',', $active))"
                                 :badge="isset($liveKeys[$route]) ? (string) ($badges[$route] ?? 0) : null"
                                 :badge:data-live-badge="$liveKeys[$route] ?? null"
-                                :badge:class="($badges[$route] ?? 0) ? '' : 'hidden'" wire:navigate>
+                                :badge:class="($badges[$route] ?? 0) ? '' : 'hidden'" wire:navigate.hover>
                                 {{ $label }}
                             </flux:sidebar.item>
                             @if ($route === 'discover')
-                                <flux:sidebar.item icon="magnifying-glass" :href="route('search')" :current="request()->routeIs('search')" wire:navigate>{{ __('Search') }}</flux:sidebar.item>
+                                <flux:sidebar.item icon="magnifying-glass" :href="route('search')" :current="request()->routeIs('search')" wire:navigate.hover>{{ __('Search') }}</flux:sidebar.item>
                             @endif
                         @endforeach
-                        <flux:sidebar.item icon="adjustments-horizontal" :href="route('preferences')" :current="request()->routeIs('preferences')" wire:navigate>{{ __('Preferences') }}</flux:sidebar.item>
-                        <flux:sidebar.item icon="star" :href="route('premium')" :current="request()->routeIs('premium')" wire:navigate>
+                        <flux:sidebar.item icon="adjustments-horizontal" :href="route('preferences')" :current="request()->routeIs('preferences')" wire:navigate.hover>{{ __('Preferences') }}</flux:sidebar.item>
+                        <flux:sidebar.item icon="star" :href="route('premium')" :current="request()->routeIs('premium')" wire:navigate.hover>
                             {{ auth()->user()->subscribed('premium') ? __('Premium ✓') : __('Get Premium') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
@@ -134,7 +134,7 @@
                         <flux:icon.shield-check class="size-5" /> {{ __('Date safely: tips') }}
                     </a>
                 @endunless
-                <a href="{{ route('profile.edit') }}" wire:navigate class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                <a href="{{ route('profile.edit') }}" wire:navigate.hover class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800">
                     <flux:icon.cog-6-tooth class="size-5 text-zinc-500" /> {{ __('Settings') }}
                 </a>
                 <form method="POST" action="{{ route('logout') }}">
@@ -149,7 +149,7 @@
         <!-- Mobile top bar -->
         <flux:header class="glass sticky top-0 z-30 border-b-0 lg:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
-            <a href="{{ $home }}" wire:navigate class="ms-2 flex items-center gap-2 font-bold">
+            <a href="{{ $home }}" wire:navigate.hover class="ms-2 flex items-center gap-2 font-bold">
                 <span class="bg-brand-gradient flex size-7 items-center justify-center rounded-lg"><x-app-logo-icon class="size-4 text-white" /></span>
                 {{ config('app.name') }}
             </a>
@@ -168,7 +168,7 @@
         <nav class="glass fixed inset-x-3 bottom-3 z-40 flex justify-around rounded-2xl px-2 py-1.5 shadow-lg shadow-black/10 lg:hidden {{ $isAdmin ? '!hidden' : '' }}">
             @foreach ($nav as [$route, $active, $icon, $label])
                 @php($isActive = request()->routeIs(...explode(',', $active)))
-                <a href="{{ route($route) }}" wire:navigate
+                <a href="{{ route($route) }}" wire:navigate.hover
                     class="relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition {{ $isActive ? 'text-brand-600 dark:text-brand-400' : 'text-zinc-500' }}">
                     <flux:icon :name="$icon" :variant="$isActive ? 'solid' : 'outline'" class="size-6 transition {{ $isActive ? 'scale-110' : '' }}" />
                     {{ $label }}
